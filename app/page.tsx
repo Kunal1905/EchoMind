@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
-import { Home } from "./home/page";
-import { Chat } from "./echo/[sessionId]/page";
-import { History } from "./history/page";
-import { Sessions } from "./premium/page";
+import { HomeContent } from "./home/HomeContent"; // Changed from default import to named import
+import { ChatContent } from "./echo/[sessionId]/ChatContent"; // Changed from default import to named import
+import { HistoryContent } from "./history/HistoryContent"; // Changed from default import to named import
+import { SessionsContent } from "./premium/SessionsContent"; // Changed from default import to named import
 
-export default function App() {
+export function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [subscriptionData, setSubscriptionData] = useState({
     freeTrialUsed: 0,
@@ -89,7 +89,7 @@ export default function App() {
       <Nav currentPage={currentPage} onNavigate={handleNavigate} />
 
       {currentPage === "home" && (
-        <Home
+        <HomeContent // Using the named export instead of default
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
           premiumCalls={subscriptionData.premiumCallsRemaining}
@@ -97,7 +97,7 @@ export default function App() {
       )}
 
       {currentPage === "chat" && (
-        <Chat
+        <ChatContent // Using the named export instead of default
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
           premiumCalls={subscriptionData.premiumCallsRemaining}
@@ -108,14 +108,14 @@ export default function App() {
       )}
 
       {currentPage === "history" && (
-        <History
+        <HistoryContent // Using the named export instead of default
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
         />
       )}
 
       {currentPage === "sessions" && (
-        <Sessions
+        <SessionsContent // Using the named export instead of default
           onNavigate={handleNavigate}
           onUpgrade={handleUpgrade}
           isPremium={subscriptionData.isPremium}
@@ -124,3 +124,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
