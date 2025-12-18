@@ -1,0 +1,42 @@
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.35.5",
+    "@neondatabase/serverless": "^1.0.2",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@vapi-ai/web": "^2.5.2",
+    "axios": "^1.13.2",
+    "class-variance-authority": "^0.7.1",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "lucide-react": "^0.555.0",
+    "motion": "^12.23.25",
+    "next": "16.0.6",
+    "razorpay": "^2.9.6",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-is": "^19.2.0",
+    "recharts": "^3.5.1",
+    "tailwind-merge": "^3.4.0",
+    "uuidv4": "^6.2.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.7",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
