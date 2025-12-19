@@ -1,8 +1,7 @@
 "use client";
 
 import { HistoryContent } from "./HistoryContent";
-import type { ReactElement } from "react";
 
-export default function History(): ReactElement {
+export default function History() {
   return <HistoryContent isPremium={false} />;
 }

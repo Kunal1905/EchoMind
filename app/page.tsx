@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
-import { HomeContent } from "./home/HomeContent"; // Changed from default import to named import
+import HomeContent from "./home/HomeContent"; // Changed from default import to named import
 import { ChatContent } from "./echo/[sessionId]/ChatContent"; // Changed from default import to named import
 import { HistoryContent } from "./history/HistoryContent"; // Changed from default import to named import
 import { SessionsContent } from "./premium/SessionsContent"; // Changed from default import to named import
-import type { ReactElement } from "react";
 
 export function App() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -126,6 +125,6 @@ export function App() {
   );
 }
 
-export default function Home(): ReactElement {
+export default function Home() {
   return <App />;
 }
