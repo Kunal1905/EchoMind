@@ -14,7 +14,7 @@ interface HomeContentProps {
   premiumCalls?: number;
 }
 
-export function HomeContent({ onNavigate, isPremium = false, premiumCalls = 0 }: HomeContentProps) {
+export default function HomeContent({ onNavigate, isPremium = false, premiumCalls = 0 }: HomeContentProps) {
   const router = useRouter();
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(0);
