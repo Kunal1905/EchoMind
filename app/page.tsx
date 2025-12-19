@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
-import HomeContent from "./home/HomeContent"; // Changed from default import to named import
-import { ChatContent } from "./echo/[sessionId]/ChatContent"; // Changed from default import to named import
-import { HistoryContent } from "./history/HistoryContent"; // Changed from default import to named import
-import { SessionsContent } from "./premium/SessionsContent"; // Changed from default import to named import
+import HomeContent from "./home/HomeContent";
+import { ChatContent } from "./echo/[sessionId]/ChatContent";
+import { HistoryContent } from "./history/HistoryContent";
+import { SessionsContent } from "./premium/SessionsContent";
 
-export function App() {
+export default function Home() {
   const [currentPage, setCurrentPage] = useState("home");
   const [subscriptionData, setSubscriptionData] = useState({
     freeTrialUsed: 0,
@@ -60,25 +60,25 @@ export function App() {
     }
   };
 
- const handleSessionComplete = async () => {
-  try {
-    // Determine if this was a premium session based on the user's current state
-    const isPremiumSession = subscriptionData.isPremium && subscriptionData.premiumCallsRemaining > 0;
-    const action = isPremiumSession ? 'usePremiumCall' : 'useFreeCall';
-    const response = await fetch('/api/subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setSubscriptionData(data);
+  const handleSessionComplete = async () => {
+    try {
+      // Determine if this was a premium session based on the user's current state
+      const isPremiumSession = subscriptionData.isPremium && subscriptionData.premiumCallsRemaining > 0;
+      const action = isPremiumSession ? 'usePremiumCall' : 'useFreeCall';
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data);
+      }
+    } catch (error) {
+      console.error('Error updating session count:', error);
     }
-  } catch (error) {
-    console.error('Error updating session count:', error);
-  }
-};
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -89,7 +89,7 @@ export function App() {
       <Nav currentPage={currentPage} onNavigate={handleNavigate} />
 
       {currentPage === "home" && (
-        <HomeContent // Using the named export instead of default
+        <HomeContent
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
           premiumCalls={subscriptionData.premiumCallsRemaining}
@@ -97,7 +97,7 @@ export function App() {
       )}
 
       {currentPage === "chat" && (
-        <ChatContent // Using the named export instead of default
+        <ChatContent
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
           premiumCalls={subscriptionData.premiumCallsRemaining}
@@ -108,14 +108,14 @@ export function App() {
       )}
 
       {currentPage === "history" && (
-        <HistoryContent // Using the named export instead of default
+        <HistoryContent
           onNavigate={handleNavigate}
           isPremium={subscriptionData.isPremium}
         />
       )}
 
       {currentPage === "sessions" && (
-        <SessionsContent // Using the named export instead of default
+        <SessionsContent
           onNavigate={handleNavigate}
           onUpgrade={handleUpgrade}
           isPremium={subscriptionData.isPremium}
@@ -123,8 +123,4 @@ export function App() {
       )}
     </div>
   );
-}
-
-export default function Home() {
-  return <App />;
 }
