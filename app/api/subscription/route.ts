@@ -19,16 +19,30 @@ export async function GET(req: NextRequest) {
       .where(eq(usersTable.id, user.id));
 
     if (userData.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      // Create user if not exists
+      await db.insert(usersTable).values({
+        id: user.id,
+        name: user.fullName || user.firstName || "User",
+        email: user.primaryEmailAddress?.emailAddress || "",
+      });
+      
+      // Return default subscription data for new user
+      return NextResponse.json({
+        freeTrialUsed: 0,
+        freeTrialLimit: 3,
+        premiumCallsRemaining: 0,
+        premiumCallsTotal: 0,
+        isPremium: false,
+      });
     }
 
     const userSubscription = userData[0];
 
     return NextResponse.json({
-      freeTrialUsed: userSubscription.freeTrialUsed,
-      freeTrialLimit: userSubscription.freeTrialLimit,
-      premiumCallsRemaining: userSubscription.premiumCallsRemaining,
-      premiumCallsTotal: userSubscription.premiumCallsTotal,
+      freeTrialUsed: userSubscription.freeTrialUsed || 0,
+      freeTrialLimit: userSubscription.freeTrialLimit || 3,
+      premiumCallsRemaining: userSubscription.premiumCallsRemaining || 0,
+      premiumCallsTotal: userSubscription.premiumCallsTotal || 0,
       isPremium: (userSubscription.premiumCallsRemaining || 0) > 0,
     });
   } catch (error) {
@@ -49,6 +63,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Ensure user exists
+    const userData = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, user.id));
+
+    if (userData.length === 0) {
+      // Create user if not exists
+      await db.insert(usersTable).values({
+        id: user.id,
+        name: user.fullName || user.firstName || "User",
+        email: user.primaryEmailAddress?.emailAddress || "",
+      });
+    }
+
     switch (action) {
       case "useFreeCall":
         // Increment free trial used count
@@ -65,8 +94,8 @@ export async function POST(req: NextRequest) {
         await db
           .update(usersTable)
           .set({
-            premiumCallsRemaining: sql`${usersTable.premiumCallsRemaining} + ${calls}`,
-            premiumCallsTotal: sql`${usersTable.premiumCallsTotal} + ${calls}`,
+            premiumCallsRemaining: sql`${usersTable.premiumCallsRemaining} + ${calls || 0}`,
+            premiumCallsTotal: sql`${usersTable.premiumCallsTotal} + ${calls || 0}`,
           })
           .where(eq(usersTable.id, user.id));
         break;
@@ -86,18 +115,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Return updated subscription data
-    const userData = await db
+    const updatedUserData = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.id, user.id));
 
-    const updatedUser = userData[0];
+    const updatedUser = updatedUserData[0];
 
     return NextResponse.json({
-      freeTrialUsed: updatedUser.freeTrialUsed,
-      freeTrialLimit: updatedUser.freeTrialLimit,
-      premiumCallsRemaining: updatedUser.premiumCallsRemaining,
-      premiumCallsTotal: updatedUser.premiumCallsTotal,
+      freeTrialUsed: updatedUser.freeTrialUsed || 0,
+      freeTrialLimit: updatedUser.freeTrialLimit || 3,
+      premiumCallsRemaining: updatedUser.premiumCallsRemaining || 0,
+      premiumCallsTotal: updatedUser.premiumCallsTotal || 0,
       isPremium: (updatedUser.premiumCallsRemaining || 0) > 0,
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, redirect, useRouter } from "next/navigation";
+import { useParams, redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Download, Clock, Sparkles, Loader2 } from "lucide-react";
@@ -20,45 +20,23 @@ interface Message {
   isLive?: boolean;
 }
 
-interface ChatContentProps {
+export function ChatContent({
+  onNavigate = (p: string) => {},
+  isPremium = false,
+  premiumCalls = 0,
+  freeTrialUsed = 0,
+  freeTrialLimit = 3,
+  onSessionComplete = () => {},
+}: {
   onNavigate?: (page: string) => void;
   isPremium?: boolean;
   premiumCalls?: number;
   freeTrialUsed?: number;
   freeTrialLimit?: number;
   onSessionComplete?: () => void;
-}
-
-export function ChatContent({
-  onNavigate,
-  isPremium = false,
-  premiumCalls = 0,
-  freeTrialUsed = 0,
-  freeTrialLimit = 3,
-  onSessionComplete = () => {},
-}: ChatContentProps) {
-  const router = useRouter();
+}) {
   const { isSignedIn } = useUser();
   if (!isSignedIn) return redirect("/sign-in");
-
-  // Handle navigation either through props (when used as component) or router (when used as page)
-  const handleNavigation = (page: string) => {
-    if (onNavigate) {
-      onNavigate(page);
-    } else {
-      // When used as a standalone page, navigate using Next.js router
-      switch (page) {
-        case 'home':
-          router.push('/');
-          break;
-        case 'history':
-          router.push('/history');
-          break;
-        default:
-          router.push(`/${page}`);
-      }
-    }
-  };
 
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<Message[]>([]);
@@ -85,15 +63,6 @@ export function ChatContent({
   const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY;
   const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID;
   const maxSessionTime = isPremium ? Infinity : 600;
-
-  // Calculate sentiment counts for the visualizer
-  const sentimentCounts = messages.reduce(
-    (acc, msg) => {
-      acc[msg.sentiment]++;
-      return acc;
-    },
-    { positive: 0, neutral: 0, negative: 0 }
-  );
 
   // Function to generate session summary
   const generateSessionSummary = async (conversation: Message[]) => {
@@ -191,7 +160,7 @@ export function ChatContent({
           console.error("Failed to save session:", json);
         } else {
           // redirect or update UI
-          handleNavigation("history");
+          onNavigate("history");
         }
       } catch (err) {
         console.error("Failed to save session:", err);
@@ -231,270 +200,326 @@ export function ChatContent({
       });
     };
 
-    const onError = (e: any) => {
-      console.error("Vapi error:", e);
-    };
+    const onSpeechStart = () => setIsSpeaking(true);
+    const onSpeechEnd = () => setIsSpeaking(false);
 
-    // Event listeners
     vapi.on("call-start", onCallStart);
     vapi.on("call-end", onCallEnd);
     vapi.on("message", onMessage);
-    vapi.on("error", onError);
+    vapi.on("speech-start", onSpeechStart);
+    vapi.on("speech-end", onSpeechEnd);
 
     return () => {
-      vapi.off("call-start", onCallStart);
-      vapi.off("call-end", onCallEnd);
-      vapi.off("message", onMessage);
-      vapi.off("error", onError);
+      try {
+        vapi.stop();
+      } catch {}
+      vapi.off?.("call-start", onCallStart);
+      vapi.off?.("call-end", onCallEnd);
+      vapi.off?.("message", onMessage);
+      vapi.off?.("speech-start", onSpeechStart);
+      vapi.off?.("speech-end", onSpeechEnd);
     };
-  }, [sessionTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [API_KEY]);
 
-  // Session timer
+  // timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setSessionTime((prev) => {
-          // Auto-end session when time limit reached
-          if (!isPremium && prev >= maxSessionTime) {
-            if (vapiRef.current) {
-              vapiRef.current.stop();
-            }
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRecording, isPremium, maxSessionTime]);
+    if (!isRecording) return;
+    const t = setInterval(() => setSessionTime((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [isRecording]);
 
-  // Scroll to bottom of messages
+  // Pre-initialize VAPI client for faster startup
+  useEffect(() => {
+    if (!API_KEY) {
+      console.error("Missing Vapi API key");
+      return;
+    }
+
+    // Pre-initialize VAPI client when component mounts
+    if (!vapiRef.current) {
+      try {
+        vapiRef.current = new Vapi(API_KEY);
+        console.log("VAPI client pre-initialized");
+      } catch (error) {
+        console.error("Failed to initialize VAPI client:", error);
+      }
+    }
+  }, [API_KEY]);
+
+  // auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize Vapi client
-  useEffect(() => {
-    if (!API_KEY) return;
+  // Check if user can start a session
+  const canStartSession = () => {
+    // For premium users, check if they have calls remaining
+    if (isPremium) {
+      return premiumCalls > 0;
+    }
+    // For free users, check session limit
+    return freeTrialUsed < freeTrialLimit;
+  };
 
-    const vapi = new Vapi(API_KEY);
-    vapiRef.current = vapi;
+  const handleToggleRecording = async () => {
+    const vapi = vapiRef.current;
+    if (!vapi) return;
+    if (!ASSISTANT_ID) return console.error("Missing assistant ID");
 
-    return () => {
-      vapiRef.current = null;
-    };
-  }, [API_KEY]);
-
-  const startCall = async () => {
-    if (!ASSISTANT_ID) {
-      console.error("Missing assistant ID");
+    if (isRecording) {
+      try {
+        vapi.stop();
+      } catch (e) {
+        console.error(e);
+      }
       return;
     }
 
-    // Check if user can start a call
-    const canStartCall = isPremium || freeTrialUsed < freeTrialLimit;
-    if (!canStartCall) {
-      alert("You've used all your free trial calls. Please upgrade to continue.");
+    // Check if user can start a session
+    if (!canStartSession()) {
+      if (isPremium) {
+        alert(
+          "You've used all your premium calls. Please add more calls to continue."
+        );
+        onNavigate("sessions");
+      } else {
+        alert(
+          `You've used all ${freeTrialLimit} free trial sessions. Upgrade to premium to continue.`
+        );
+        onNavigate("sessions");
+      }
       return;
     }
 
     setIsInitializing(true);
     try {
-      await vapiRef.current?.start(ASSISTANT_ID);
-    } catch (error) {
-      console.error("Failed to start call:", error);
+      // start call — SDK variant may be start or startCall
+      if (typeof (vapi as any).start === "function") {
+        (vapi as any).start(ASSISTANT_ID);
+      } else if (typeof (vapi as any).startCall === "function") {
+        (vapi as any).startCall({
+          assistant: { id: ASSISTANT_ID },
+          audio: { input: { enabled: true }, output: { enabled: true } },
+          webrtc: { krisp: false },
+        });
+      } else {
+        console.error("Vapi SDK start not found");
+      }
+    } catch (err) {
+      console.error("Failed to start call:", err);
     } finally {
       setIsInitializing(false);
     }
   };
 
-  const endCall = () => {
-    vapiRef.current?.stop();
+  const handleEndCall = () => {
+    setIsSaving(true);
+    try {
+      vapiRef.current?.stop();
+    } catch (e) {
+      console.error(e);
+      setIsSaving(false);
+    }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTime = (s: number) => {
+    const mm = Math.floor(s / 60)
+      .toString()
+      .padStart(2, "0");
+    const ss = (s % 60).toString().padStart(2, "0");
+    return `${mm}:${ss}`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950 pt-20 pb-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen neural-bg pt-20 pb-32 px-4">
+      {/* Header */}
+      <div className="container mx-auto max-w-4xl mb-6">
+        <div className="flex items-center justify-between">
           <button
-            onClick={() => handleNavigation("home")}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            onClick={() => onNavigate("home")}
+            className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
           >
-            <ArrowLeft size={20} />
-            <span>Back to Home</span>
+            <ArrowLeft size={20} /> Back
           </button>
-          <div className="flex items-center gap-2 text-gray-400">
-            <Clock size={18} />
-            <span>{formatTime(sessionTime)}</span>
-            {!isPremium && sessionTime >= maxSessionTime && (
-              <span className="ml-2 text-amber-400">(Time Limit Reached)</span>
-            )}
-          </div>
+          <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-teal-300">
+            Echo Session
+          </h3>
+          <button className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
+            <Download size={20} />{" "}
+            <span className="hidden sm:inline">Export</span>
+          </button>
         </div>
+      </div>
 
-        {/* Main Chat Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Messages Panel */}
-          <div className="lg:col-span-2">
-            <div className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl p-6 h-[calc(100vh-200px)] flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">🎙️ Echo Session</h2>
-                {isRecording && (
-                  <div className="flex items-center gap-2 text-red-400">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm">Recording</span>
-                  </div>
-                )}
+      {/* Main Content - Centered for larger screens */}
+      <div className="container mx-auto max-w-4xl">
+        <div className="flex flex-col items-center">
+          {/* Chat Area - Centered on all screens */}
+          <div className="w-full max-w-2xl">
+            <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 bg-gray-900/30">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-gray-300 flex items-center gap-2">
+                  <Clock className="text-violet-400" size={18} /> Session Time
+                </span>
+                <span className="text-2xl font-mono text-white">
+                  {formatTime(sessionTime)}
+                </span>
               </div>
 
+              {/* Summary section - shown when session ends */}
+              {summary && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-violet-900/40 to-teal-900/40 rounded-xl border border-violet-500/30">
+                  <h4 className="font-bold text-violet-300 mb-2 flex items-center gap-2">
+                    <Sparkles className="text-yellow-400" /> Session Summary
+                  </h4>
+                  <p className="text-gray-200">{summary}</p>
+                  {isGeneratingSummary && (
+                    <p className="text-gray-400 italic mt-2 flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} /> Generating
+                      detailed summary...
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Messages Container */}
-              <div className="flex-grow overflow-y-auto mb-6 space-y-4 pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800/50">
-                {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500">
-                    <div className="text-6xl mb-4">👋</div>
-                    <p className="text-center">
-                      Start a conversation with Echo to begin your session
+              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] max-h-[500px] overflow-y-auto bg-gray-900/20">
+                {!canStartSession() && isPremium ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-600/20 to-red-600/20 flex items-center justify-center border border-amber-500/30">
+                      <span className="text-4xl">⚠️</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-amber-300">
+                      Premium Calls Exhausted
+                    </h3>
+                    <p className="text-gray-400 max-w-md">
+                      You've used all your premium calls. Please add more calls to
+                      continue your therapy sessions.
+                    </p>
+                    <button
+                      onClick={() => onNavigate("sessions")}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-500 rounded-full hover:from-amber-400 hover:to-red-400 transition-all"
+                    >
+                      Add More Calls
+                    </button>
+                  </div>
+                ) : !canStartSession() && !isPremium ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-600/20 to-purple-600/20 flex items-center justify-center border border-violet-500/30">
+                      <span className="text-4xl">⭐</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-violet-300">
+                      Free Trial Completed
+                    </h3>
+                    <p className="text-gray-400 max-w-md">
+                      {`You've used all ${freeTrialLimit} free trial sessions. Upgrade to premium to continue your therapy journey.`}
+                    </p>
+                    <button
+                      onClick={() => onNavigate("sessions")}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full hover:from-violet-500 hover:to-purple-500 transition-all"
+                    >
+                      Upgrade to Premium
+                    </button>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                    <EchoOrb
+                      sentiment="neutral"
+                      size="lg"
+                      isPulsing={isSpeaking}
+                    />
+                    <p className="text-gray-400 animate-pulse text-lg">
+                      {isRecording
+                        ? "Listening... 🎙️"
+                        : "Press the mic to start your session 🚀"}
+                    </p>
+                    <p className="text-gray-500 text-sm max-w-md">
+                      Share your thoughts and feelings freely. I'm here to
+                      listen and help you explore your emotions.
                     </p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${
-                        msg.sender === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          msg.sender === "user"
-                            ? "bg-violet-600/30 border border-violet-500/30"
-                            : "bg-gray-700/50 border border-gray-600/30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium">
-                            {msg.sender === "user" ? "You" : "Echo"}
-                          </span>
-                          {msg.isLive && (
-                            <span className="text-xs text-amber-400">●</span>
-                          )}
+                  <>
+                    <div className="space-y-4">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${
+                            msg.sender === "user"
+                              ? "justify-end"
+                              : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[85%] px-4 py-3 rounded-2xl border ${
+                              msg.sender === "user"
+                                ? "bg-gradient-to-r from-violet-600/30 to-violet-700/30 border-violet-500/40 text-white rounded-br-none"
+                                : "bg-gray-800/60 border-gray-700/40 text-gray-200 rounded-bl-none"
+                            }`}
+                          >
+                            <p>{msg.text}</p>
+                          </div>
                         </div>
-                        <p className="whitespace-pre-wrap">{msg.text}</p>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+                      ))}
+                    </div>
 
-              {/* Controls */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {!isRecording ? (
-                  <button
-                    onClick={startCall}
-                    disabled={isInitializing}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full hover:from-violet-500 hover:to-teal-400 transition-all disabled:opacity-50"
-                  >
-                    {isInitializing ? (
-                      <>
-                        <Loader2 className="animate-spin" size={20} />
-                        <span>Initializing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={20} />
-                        <span>Start Session</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={endCall}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-red-600 to-orange-500 rounded-full hover:from-red-500 hover:to-orange-400 transition-all"
-                  >
-                    <span>⏹️ End Session</span>
-                  </button>
-                )}
-
-                {messages.length > 0 && (
-                  <button className="px-6 py-4 bg-gray-700/50 hover:bg-gray-700 rounded-full transition-colors flex items-center gap-2 border border-gray-600">
-                    <Download size={20} />
-                    <span>Save</span>
-                  </button>
+                    {/* The magic scroll anchor */}
+                    <div ref={messagesEndRef} />
+                  </>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Vapi HUD */}
-            <VapiHUD
-              isRecording={isRecording}
-              onToggleRecording={isRecording ? endCall : startCall}
-              onEndCall={endCall}
-            />
+          {/* Loading indicator during initialization */}
+          <AnimatePresence>
+            {isInitializing && (
+              <motion.div
+                className="mt-4 w-full max-w-2xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <div className="flex items-center justify-center gap-2 p-4 bg-gray-800/50 rounded-xl">
+                  <Loader2 className="animate-spin text-violet-400" size={20} />
+                  <span className="text-gray-300">Starting session...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Sentiment Visualizer */}
-            <SentimentVisualizer
-              positive={sentimentCounts.positive}
-              neutral={sentimentCounts.neutral}
-              negative={sentimentCounts.negative}
-            />
+          {/* Loading indicator during saving */}
+          <AnimatePresence>
+            {isSaving && (
+              <motion.div
+                className="mt-4 w-full max-w-2xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <div className="flex items-center justify-center gap-2 p-4 bg-gray-800/50 rounded-xl">
+                  <Loader2 className="animate-spin text-violet-400" size={20} />
+                  <span className="text-gray-300">Saving session...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Echo Orb */}
-            <div className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl p-6">
-              <h3 className="font-bold mb-4">🧘‍♀️ Emotional State</h3>
-              <div className="flex justify-center">
-                <EchoOrb
-                  sentiment="neutral"
-                  size="lg"
-                  isPulsing={isRecording}
-                />
-              </div>
+          {/* Control Buttons - Always below chatbox */}
+          <div className="mt-6 w-full max-w-2xl">
+            <div className="flex justify-center">
+              <VapiHUD
+                isRecording={isRecording}
+                onToggleRecording={handleToggleRecording}
+                onEndCall={handleEndCall}
+              />
             </div>
           </div>
         </div>
-
-        {/* Summary Section */}
-        <AnimatePresence>
-          {(summary || isGeneratingSummary) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-6 backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl p-6"
-            >
-              <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Sparkles className="text-violet-400" size={20} />
-                Session Summary
-              </h3>
-              {isGeneratingSummary ? (
-                <div className="flex items-center gap-3 text-gray-400">
-                  <Loader2 className="animate-spin" size={20} />
-                  <span>Generating insights...</span>
-                </div>
-              ) : (
-                <div className="text-gray-300 whitespace-pre-line">
-                  {summary}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
 }
+
+export default ChatContent;

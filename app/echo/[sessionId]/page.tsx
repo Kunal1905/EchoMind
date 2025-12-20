@@ -1,7 +1,8 @@
-"use client";
+import React from 'react'
+import ChatContent from './ChatContent'
 
-import { ChatContent } from "./ChatContent";
-
-export default function Chat() {
-  return <ChatContent isPremium={false} premiumCalls={0} freeTrialUsed={0} freeTrialLimit={3} />;
+export default function History() {
+  return (
+    <ChatContent />
+  )
 }

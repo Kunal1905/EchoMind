@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
 import HomeContent from "./home/HomeContent";
 import { ChatContent } from "./echo/[sessionId]/ChatContent";
-import { HistoryContent } from "./history/HistoryContent";
+import { HistoryContent } from "./history/HistoryContent"
 import { SessionsContent } from "./premium/SessionsContent";
 
 export default function Home() {
@@ -25,10 +25,35 @@ export default function Home() {
         const response = await fetch("/api/subscription");
         if (response.ok) {
           const data = await response.json();
-          setSubscriptionData(data);
+          setSubscriptionData({
+            freeTrialUsed: data.freeTrialUsed || 0,
+            freeTrialLimit: data.freeTrialLimit || 3,
+            premiumCallsRemaining: data.premiumCallsRemaining || 0,
+            premiumCallsTotal: data.premiumCallsTotal || 0,
+            isPremium: data.isPremium || false,
+          });
+        } else {
+          // Handle error response
+          console.error("Failed to fetch subscription data:", response.status);
+          // Set default values
+          setSubscriptionData({
+            freeTrialUsed: 0,
+            freeTrialLimit: 3,
+            premiumCallsRemaining: 0,
+            premiumCallsTotal: 0,
+            isPremium: false,
+          });
         }
       } catch (error) {
         console.error("Error fetching subscription data:", error);
+        // Set default values on error
+        setSubscriptionData({
+          freeTrialUsed: 0,
+          freeTrialLimit: 3,
+          premiumCallsRemaining: 0,
+          premiumCallsTotal: 0,
+          isPremium: false,
+        });
       } finally {
         setLoading(false);
       }
@@ -53,7 +78,13 @@ export default function Home() {
 
       if (response.ok) {
         const data = await response.json();
-        setSubscriptionData(data);
+        setSubscriptionData({
+          freeTrialUsed: data.freeTrialUsed || 0,
+          freeTrialLimit: data.freeTrialLimit || 3,
+          premiumCallsRemaining: data.premiumCallsRemaining || 0,
+          premiumCallsTotal: data.premiumCallsTotal || 0,
+          isPremium: data.isPremium || false,
+        });
       }
     } catch (error) {
       console.error("Error upgrading subscription:", error);
@@ -73,7 +104,13 @@ export default function Home() {
       
       if (response.ok) {
         const data = await response.json();
-        setSubscriptionData(data);
+        setSubscriptionData({
+          freeTrialUsed: data.freeTrialUsed || 0,
+          freeTrialLimit: data.freeTrialLimit || 3,
+          premiumCallsRemaining: data.premiumCallsRemaining || 0,
+          premiumCallsTotal: data.premiumCallsTotal || 0,
+          isPremium: data.isPremium || false,
+        });
       }
     } catch (error) {
       console.error('Error updating session count:', error);
@@ -81,7 +118,7 @@ export default function Home() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-900">Loading...</div>;
   }
 
   return (

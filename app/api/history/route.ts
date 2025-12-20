@@ -5,10 +5,10 @@ import { SessionChatTable } from "@/config/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
-  const user = await currentUser();
-  
   try {
     // Check if user is authenticated
+    const user = await currentUser();
+    
     if (!user) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 });
     }
@@ -23,10 +23,15 @@ export async function GET(req: NextRequest) {
       .where(eq(SessionChatTable.createdBy, userEmail))
       .orderBy(desc(SessionChatTable.createdAt));
     
-    return NextResponse.json(sessions);
-  } catch (e) {
+    // Ensure we're returning a proper JSON response
+    return NextResponse.json(sessions || []);
+  } catch (e: any) {
     console.error("Error fetching history:", e);
-    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+    // Return a proper JSON error response
+    return NextResponse.json({ 
+      error: "Failed to fetch history", 
+      details: e.message || "Unknown error" 
+    }, { status: 500 });
   }
 }
 
@@ -68,10 +73,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true});
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error saving session: ", err);
     return NextResponse.json(
-      {error: " Failed to save session"},
+      {error: "Failed to save session", details: err.message || "Unknown error"},
       {status: 500}
     );
   }

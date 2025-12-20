@@ -1,12 +1,10 @@
-// app/history/HistoryContent.tsx (client)
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, BarChart3, ChevronDown, Loader2, MessageCircle, Brain, Sparkles } from 'lucide-react';
+import { Calendar, BarChart3, ChevronDown, Loader2, MessageCircle, Brain, Sparkles, AlertTriangle } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 
 interface Session {
   sessionId: string;
@@ -18,44 +16,40 @@ interface Session {
   createdAt: string; // ISO string
 }
 
-interface HistoryContentProps {
-  onNavigate?: (p: string) => void;
-  isPremium?: boolean;
-}
-
-export function HistoryContent({ onNavigate, isPremium = false }: HistoryContentProps) {
-  const router = useRouter();
+export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false }: { onNavigate?: (p:string)=>void; isPremium?: boolean; }) {
   const { isLoaded, isSignedIn } = useUser();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
-  // Handle navigation either through props (when used as component) or router (when used as page)
-  const handleNavigation = (page: string) => {
-    if (onNavigate) {
-      onNavigate(page);
-    } else {
-      // When used as a standalone page, navigate using Next.js router
-      switch (page) {
-        case 'home':
-          router.push('/');
-          break;
-        default:
-          router.push(`/${page}`);
-      }
-    }
-  };
-
   useEffect(() => {
     const fetchSessions = async () => {
       if (!isLoaded || !isSignedIn) return;
       setLoading(true);
+      setError(null);
+      
       try {
         const res = await fetch("/api/history");
+        
+        // Check if response is ok
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText || 'Failed to fetch'}`);
+        }
+        
+        // Check if response has content
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response format: Expected JSON');
+        }
+        
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Failed to fetch");
-        // dedupe by sessionId and sort desc by createdAt
+        if (!Array.isArray(json)) {
+          throw new Error('Invalid data format received from server');
+        }
+        
+        // Deduplicate by sessionId and sort desc by createdAt
         const map = new Map<string, Session>();
         for (const s of json as Session[]) {
           map.set(s.sessionId, s); // last wins if duplicates; we'll sort next
@@ -63,12 +57,13 @@ export function HistoryContent({ onNavigate, isPremium = false }: HistoryContent
         const array = Array.from(map.values()).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSessions(array);
       } catch (err: any) {
-        console.error(err);
-        setError(err?.message || "Failed");
+        console.error("Error fetching sessions:", err);
+        setError(err?.message || "Failed to load session history");
       } finally {
         setLoading(false);
       }
     };
+    
     fetchSessions();
   }, [isLoaded, isSignedIn]);
 
@@ -85,7 +80,21 @@ export function HistoryContent({ onNavigate, isPremium = false }: HistoryContent
     </div>
   );
   if (loading) return <div className="h-screen flex items-center justify-center bg-gray-900"><Loader2 className="animate-spin text-violet-400" size={48} /></div>;
-  if (error) return <div className="p-8 text-red-400 bg-gray-900 min-h-screen flex items-center justify-center">⚠️ {error}</div>;
+  if (error) return (
+    <div className="p-8 text-red-400 bg-gray-900 min-h-screen flex items-center justify-center">
+      <div className="max-w-2xl text-center">
+        <AlertTriangle className="mx-auto mb-4 text-yellow-400" size={48} />
+        <h2 className="text-2xl font-bold text-white mb-2">⚠️ Error Loading History</h2>
+        <p className="text-gray-300 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
@@ -146,7 +155,7 @@ export function HistoryContent({ onNavigate, isPremium = false }: HistoryContent
               Your therapeutic journey begins with your first conversation. Start a session to see your history here.
             </p>
             <button 
-              onClick={() => handleNavigation("home")}
+              onClick={() => onNavigate("home")}
               className="px-6 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full text-white font-medium hover:from-violet-500 hover:to-teal-400 transition-all shadow-lg"
             >
               Start Your First Session
@@ -212,3 +221,5 @@ export function HistoryContent({ onNavigate, isPremium = false }: HistoryContent
     </div>
   );
 }
+
+export default HistoryContent;
