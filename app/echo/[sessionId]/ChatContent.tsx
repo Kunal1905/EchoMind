@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Download, Clock, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Sparkles, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
+import { vapiClient } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
-import { SentimentVisualizer } from "../../components/SentimentVisualizer";
 import { EchoOrb } from "../../components/EchoOrb";
 import { v4 as uuidv4 } from "uuid";
 
@@ -15,13 +15,12 @@ interface Message {
   id: string;
   text: string;
   sender: "user" | "ai";
-  sentiment: "positive" | "neutral" | "negative";
   timestamp: Date;
   isLive?: boolean;
 }
 
 export function ChatContent({
-  onNavigate = (p: string) => {},
+  onNavigate = () => {},
   isPremium = false,
   premiumCalls = 0,
   freeTrialUsed = 0,
@@ -36,33 +35,26 @@ export function ChatContent({
   onSessionComplete?: () => void;
 }) {
   const { isSignedIn } = useUser();
-  if (!isSignedIn) return redirect("/sign-in");
+  if (!isSignedIn) redirect("/sign-in");
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const updateMessages = (fn: (prev: Message[]) => Message[]) => {
-    setMessages((prev) => {
-      const updated = fn(prev);
-      messagesRef.current = updated;
-      return updated;
-    });
-  };
+  const messagesRef = useRef<Message[]>([]);
 
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isWaitingForAssistant, setIsWaitingForAssistant] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
   const [summary, setSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const vapiRef = useRef<Vapi | null>(null);
-  const saveAttemptedRef = useRef(false);
-  const currentSessionIdRef = useRef<string | null>(null);
 
-  const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY;
-  const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID;
-  const maxSessionTime = isPremium ? Infinity : 600;
+  const vapiRef = useRef<Vapi | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const saveAttemptedRef = useRef(false);
+
+  const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY!;
+  const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID!;
 
   // Function to generate session summary
   const generateSessionSummary = async (conversation: Message[]) => {
@@ -75,14 +67,12 @@ export function ChatContent({
       .join(" ");
 
     // Simple summary generation logic
-    // In a real application, this would call an AI service
     const wordCount = userMessages.split(" ").length;
 
     if (wordCount < 10) {
       return "Brief session with minimal conversation.";
     }
 
-    // Create a basic summary based on conversation length
     if (wordCount < 50) {
       return "Short conversation covering initial thoughts and feelings.";
     } else if (wordCount < 150) {
@@ -92,92 +82,95 @@ export function ChatContent({
     }
   };
 
+  /* ---------------- INIT VAPI ---------------- */
   useEffect(() => {
-    if (!API_KEY) {
-      console.error("Missing Vapi API key");
-      return;
+    if (!vapiRef.current) {
+      vapiRef.current = vapiClient;
     }
+  }, []);
 
+  /* ---------------- VAPI EVENTS ---------------- */
+  useEffect(() => {
     const vapi = vapiRef.current;
-    if (!vapi) {
-      console.error("VAPI client not initialized");
-      return;
-    }
+    if (!vapi) return;
 
     const onCallStart = () => {
-      // generate a single sessionId when the call starts
-      if (!currentSessionIdRef.current) currentSessionIdRef.current = uuidv4();
+      sessionIdRef.current = uuidv4();
       setIsRecording(true);
+      setIsInitializing(false);
+      setIsWaitingForAssistant(true);
     };
 
     const onCallEnd = async () => {
       setIsRecording(false);
-      setIsSpeaking(false);
+      setIsWaitingForAssistant(false);
+      setIsSaving(true);
       onSessionComplete();
 
       // Generate summary before saving
       setIsGeneratingSummary(true);
-      const generatedSummary = await generateSessionSummary(
-        messagesRef.current
-      );
+      const generatedSummary = await generateSessionSummary(messagesRef.current);
       setSummary(generatedSummary);
       setIsGeneratingSummary(false);
 
       // ensure we only try to save once
-      if (saveAttemptedRef.current) return;
+      if (saveAttemptedRef.current) {
+        setIsSaving(false);
+        return;
+      }
       saveAttemptedRef.current = true;
 
-      const notes = messagesRef.current
-        .map((m) => `${m.sender === "user" ? "User" : "AI"}: ${m.text}`)
-        .join("\n");
-
-      // Format duration as HH:MM:SS
-      const formatDuration = (seconds: number): string => {
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${hrs.toString().padStart(2, "0")}:${mins
-          .toString()
-          .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-      };
-
-      const durationStr = formatDuration(sessionTime);
-
       try {
+        const notes = messagesRef.current
+          .map((m) => `${m.sender}: ${m.text}`)
+          .join("\n");
+
+        // Format duration as HH:MM:SS
+        const formatDuration = (seconds: number): string => {
+          const hrs = Math.floor(seconds / 3600);
+          const mins = Math.floor((seconds % 3600) / 60);
+          const secs = seconds % 60;
+          return `${hrs.toString().padStart(2, "0")}:${mins
+            .toString()
+            .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+        };
+
+        const durationStr = formatDuration(sessionTime);
+
         const response = await fetch("/api/session-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sessionId: currentSessionIdRef.current,
+            sessionId: sessionIdRef.current,
             notes,
             summary: generatedSummary,
             duration: durationStr,
           }),
         });
 
-        const json = await response.json();
         if (!response.ok) {
-          console.error("Failed to save session:", json);
+          console.error("Save failed", await response.json());
         } else {
-          // redirect or update UI
           onNavigate("history");
         }
-      } catch (err) {
-        console.error("Failed to save session:", err);
+      } catch (e) {
+        console.error("Save failed", e);
       } finally {
-        // reset sessionId so next call gets a new id
-        currentSessionIdRef.current = null;
-        saveAttemptedRef.current = false; // keep it false for next session
-        setIsSaving(false); // Reset saving state
+        setIsSaving(false);
+        sessionIdRef.current = null;
+        saveAttemptedRef.current = false;
       }
     };
 
     const onMessage = (msg: any) => {
-      if (!msg || msg.type !== "transcript" || !msg.transcript) return;
-      const sender = msg.role === "assistant" ? "ai" : "user";
+      if (msg?.type !== "transcript") return;
+
+      const sender: "user" | "ai" = msg.role === "assistant" ? "ai" : "user";
       const isFinal = msg.transcriptType === "final";
 
-      updateMessages((prev) => {
+      setIsWaitingForAssistant(false);
+
+      setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last && last.sender === sender && last.isLive) {
           const copy = [...prev];
@@ -186,70 +179,61 @@ export function ChatContent({
             text: msg.transcript,
             isLive: !isFinal,
           };
+          messagesRef.current = copy;
           return copy;
         }
-        const newMsg: Message = {
+
+        const newMessage: Message = {
           id: `${sender}-${Date.now()}`,
           text: msg.transcript,
           sender,
-          sentiment: "neutral",
           timestamp: new Date(),
           isLive: !isFinal,
         };
-        return [...prev, newMsg];
+
+        const updated = [...prev, newMessage];
+        messagesRef.current = updated;
+        return updated;
       });
     };
 
-    const onSpeechStart = () => setIsSpeaking(true);
-    const onSpeechEnd = () => setIsSpeaking(false);
+    const onError = (error: any) => {
+      console.error("VAPI Error:", error);
+      // Clear all loading states on error
+      setIsInitializing(false);
+      setIsSaving(false);
+      // If we were recording, stop recording
+      if (isRecording) {
+        setIsRecording(false);
+        setIsWaitingForAssistant(false);
+      }
+    };
 
     vapi.on("call-start", onCallStart);
     vapi.on("call-end", onCallEnd);
     vapi.on("message", onMessage);
-    vapi.on("speech-start", onSpeechStart);
-    vapi.on("speech-end", onSpeechEnd);
+    vapi.on("error", onError);
 
     return () => {
-      try {
-        vapi.stop();
-      } catch {}
-      vapi.off?.("call-start", onCallStart);
-      vapi.off?.("call-end", onCallEnd);
-      vapi.off?.("message", onMessage);
-      vapi.off?.("speech-start", onSpeechStart);
-      vapi.off?.("speech-end", onSpeechEnd);
+      vapi.off("call-start", onCallStart);
+      vapi.off("call-end", onCallEnd);
+      vapi.off("message", onMessage);
+      vapi.off("error", onError);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [API_KEY]);
+  }, []);
 
-  // timer
+  /* ---------------- TIMER ---------------- */
   useEffect(() => {
     if (!isRecording) return;
     const t = setInterval(() => setSessionTime((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [isRecording]);
 
-  // Pre-initialize VAPI client for faster startup
+  /* ---------------- AUTOSCROLL (CHAT ONLY) ---------------- */
   useEffect(() => {
-    if (!API_KEY) {
-      console.error("Missing Vapi API key");
-      return;
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-
-    // Pre-initialize VAPI client when component mounts
-    if (!vapiRef.current) {
-      try {
-        vapiRef.current = new Vapi(API_KEY);
-        console.log("VAPI client pre-initialized");
-      } catch (error) {
-        console.error("Failed to initialize VAPI client:", error);
-      }
-    }
-  }, [API_KEY]);
-
-  // auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Check if user can start a session
@@ -262,17 +246,15 @@ export function ChatContent({
     return freeTrialUsed < freeTrialLimit;
   };
 
-  const handleToggleRecording = async () => {
+  /* ---------------- MIC HANDLER ---------------- */
+  const toggleRecording = () => {
     const vapi = vapiRef.current;
     if (!vapi) return;
-    if (!ASSISTANT_ID) return console.error("Missing assistant ID");
 
+    // ✅ ALWAYS allow stop
     if (isRecording) {
-      try {
-        vapi.stop();
-      } catch (e) {
-        console.error(e);
-      }
+      setIsSaving(true);
+      vapi.stop();
       return;
     }
 
@@ -294,32 +276,10 @@ export function ChatContent({
 
     setIsInitializing(true);
     try {
-      // start call — SDK variant may be start or startCall
-      if (typeof (vapi as any).start === "function") {
-        (vapi as any).start(ASSISTANT_ID);
-      } else if (typeof (vapi as any).startCall === "function") {
-        (vapi as any).startCall({
-          assistant: { id: ASSISTANT_ID },
-          audio: { input: { enabled: true }, output: { enabled: true } },
-          webrtc: { krisp: false },
-        });
-      } else {
-        console.error("Vapi SDK start not found");
-      }
+      vapi.start(ASSISTANT_ID);
     } catch (err) {
       console.error("Failed to start call:", err);
-    } finally {
       setIsInitializing(false);
-    }
-  };
-
-  const handleEndCall = () => {
-    setIsSaving(true);
-    try {
-      vapiRef.current?.stop();
-    } catch (e) {
-      console.error(e);
-      setIsSaving(false);
     }
   };
 
@@ -331,6 +291,7 @@ export function ChatContent({
     return `${mm}:${ss}`;
   };
 
+  /* ---------------- UI ---------------- */
   return (
     <div className="min-h-screen neural-bg pt-20 pb-32 px-4">
       {/* Header */}
@@ -345,10 +306,6 @@ export function ChatContent({
           <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-teal-300">
             Echo Session
           </h3>
-          <button className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
-            <Download size={20} />{" "}
-            <span className="hidden sm:inline">Export</span>
-          </button>
         </div>
       </div>
 
@@ -384,7 +341,7 @@ export function ChatContent({
               )}
 
               {/* Messages Container */}
-              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] max-h-[500px] overflow-y-auto bg-gray-900/20">
+              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] bg-gray-900/20">
                 {!canStartSession() && isPremium ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-600/20 to-red-600/20 flex items-center justify-center border border-amber-500/30">
@@ -424,14 +381,10 @@ export function ChatContent({
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                    <EchoOrb
-                      sentiment="neutral"
-                      size="lg"
-                      isPulsing={isSpeaking}
-                    />
+                    <EchoOrb size="lg" isPulsing={isRecording} />
                     <p className="text-gray-400 animate-pulse text-lg">
                       {isRecording
-                        ? "Listening... 🎙️"
+                        ? "🎙️ Waiting for assistant to respond..."
                         : "Press the mic to start your session 🚀"}
                     </p>
                     <p className="text-gray-500 text-sm max-w-md">
@@ -463,8 +416,6 @@ export function ChatContent({
                         </div>
                       ))}
                     </div>
-
-                    {/* The magic scroll anchor */}
                     <div ref={messagesEndRef} />
                   </>
                 )}
@@ -506,13 +457,15 @@ export function ChatContent({
             )}
           </AnimatePresence>
 
-          {/* Control Buttons - Always below chatbox */}
+          {/* HUD */}
           <div className="mt-6 w-full max-w-2xl">
             <div className="flex justify-center">
               <VapiHUD
                 isRecording={isRecording}
-                onToggleRecording={handleToggleRecording}
-                onEndCall={handleEndCall}
+                onToggleRecording={toggleRecording}
+                isInitializing={isInitializing}
+                isWaitingForAssistant={isWaitingForAssistant}
+                isSaving={isSaving}
               />
             </div>
           </div>

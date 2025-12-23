@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 const MODEL = "gemini-flash-latest"; // works with generateContent
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
+// Helper function to retry API calls
+async function retryApiCall(fn: () => Promise<any>, retries = 3, delay = 1000): Promise<any> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries === 0) throw error;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryApiCall(fn, retries - 1, delay * 2);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { notes } = await req.json();
@@ -18,7 +29,7 @@ export async function POST(req: NextRequest) {
 You are an expert therapist and note-taker.
 
 You will receive the full transcript of a conversation between a client and an AI emotional-wellness assistant. 
-Your task is to produce a clear, structured, concise summary for the user’s history page.
+Your task is to produce a clear, structured, concise summary for the user's history page.
 
 Follow this exact format:
 
@@ -49,7 +60,8 @@ Output only the formatted summary.
 ${notes}
 `;
 
-    const res = await fetch(
+    // Add retry logic for the API call
+    const apiCall = () => fetch(
       `${API_URL}?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
@@ -66,6 +78,7 @@ ${notes}
       }
     );
 
+    const res = await retryApiCall(apiCall);
     const data = await res.json();
 
     console.log("Gemini raw response:", data);
@@ -83,10 +96,10 @@ ${notes}
     return NextResponse.json({
       summary: summary.trim(),
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Generate summary error:", err);
     return NextResponse.json(
-      { error: "Failed to generate summary" },
+      { error: "Failed to generate summary", details: err.message },
       { status: 500 }
     );
   }

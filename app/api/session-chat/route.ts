@@ -37,23 +37,38 @@ export async function POST(req: NextRequest) {
     const summaryData = await summaryRes.json();
     const finalSummary = summaryData?.summary ?? "";
 
-    await db.insert(SessionChatTable).values({
+    // Add timeout handling for database operation
+    const dbInsertPromise = db.insert(SessionChatTable).values({
       sessionId,
       createdBy: userEmail,
       notes,
       summary: finalSummary,
-      sentimentAnalysis: sentimentAnalysis || "",
-      duration: duration || "00:00:00",
       createdAt: new Date(),
     });
+
+    // Add a timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timeout')), 10000)
+    );
+
+    await Promise.race([dbInsertPromise, timeoutPromise]);
     console.log("Database connection successful");
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Session save error:", err);
     console.error("Database connection failed:", err);
+    
+    // Handle specific error types
+    if (err.message && err.message.includes('timeout')) {
+      return NextResponse.json(
+        { error: "Database connection timed out. Please try again." },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to save session" },
+      { error: "Failed to save session", details: err.message },
       { status: 500 }
     );
   }
@@ -63,9 +78,10 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('sessionId');
-  const user = await currentUser();
-
+  
   try {
+    const user = await currentUser();
+    
     if (sessionId) {
       // Get specific session
       const result = await db.select().from(SessionChatTable)
@@ -79,14 +95,26 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "User not authenticated" }, { status: 401 });
       }
       
-      const result = await db.select().from(SessionChatTable)
+      // Add timeout for database query
+      const dbQueryPromise = db.select().from(SessionChatTable)
         .where(eq(SessionChatTable.createdBy, userEmail))
         .orderBy(SessionChatTable.createdAt);
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      const result = await Promise.race([dbQueryPromise, timeoutPromise]) as any[];
+      
       return NextResponse.json(result);
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("Error fetching sessions:", e);
-    return NextResponse.json({ error: "Failed to fetch sessions" }, { status: 500 });
+    
+    if (e.message && e.message.includes('timeout')) {
+      return NextResponse.json({ error: "Database query timed out. Please try again." }, { status: 503 });
+    }
+    
+    return NextResponse.json({ error: "Failed to fetch sessions", details: e.message }, { status: 500 });
   }
 }

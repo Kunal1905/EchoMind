@@ -45,10 +45,10 @@ export async function GET(req: NextRequest) {
       premiumCallsTotal: userSubscription.premiumCallsTotal || 0,
       isPremium: (userSubscription.premiumCallsRemaining || 0) > 0,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching subscription data:", error);
     return NextResponse.json(
-      { error: "Failed to fetch subscription data" },
+      { error: "Failed to fetch subscription data", details: error.message },
       { status: 500 }
     );
   }
@@ -129,10 +129,17 @@ export async function POST(req: NextRequest) {
       premiumCallsTotal: updatedUser.premiumCallsTotal || 0,
       isPremium: (updatedUser.premiumCallsRemaining || 0) > 0,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating subscription data:", error);
+    // Handle specific Clerk errors
+    if (error.code === 'auth_invalid_token') {
+      return NextResponse.json(
+        { error: "Authentication token invalid. Please refresh the page and try again." },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
-      { error: "Failed to update subscription data" },
+      { error: "Failed to update subscription data", details: error.message },
       { status: 500 }
     );
   }

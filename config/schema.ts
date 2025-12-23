@@ -16,8 +16,6 @@ export const SessionChatTable = pgTable('history', {
   createdBy: varchar('created_by'),
   notes: text('notes'),
   summary: text('summary'),
-  sentimentAnalysis: text('sentiment_analysis'),
-  duration: varchar('duration'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

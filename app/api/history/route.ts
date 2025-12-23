@@ -51,8 +51,6 @@ export async function POST(req: NextRequest) {
       sessionId,
       notes,
       summary,
-      sentimentAnalysis,
-      duration
     } = body;
 
     if(!sessionId || !summary) {
@@ -68,8 +66,6 @@ export async function POST(req: NextRequest) {
       createdBy: user.id,
       notes,
       summary,
-      sentimentAnalysis,
-      duration,
     });
 
     return NextResponse.json({ success: true});

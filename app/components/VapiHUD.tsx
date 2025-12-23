@@ -7,15 +7,21 @@ import { useState } from 'react';
 interface VapiHUDProps {
   isRecording: boolean;
   onToggleRecording: () => void;
-  onEndCall: () => void;
+  onEndCall?: () => void; // Make this optional since we're combining functionality
   waveformData?: number[];
+  isWaitingForAssistant?: boolean;
+  isInitializing?: boolean;
+  isSaving?: boolean; // Add saving state
 }
 
 export function VapiHUD({ 
   isRecording, 
   onToggleRecording, 
-  onEndCall,
-  waveformData = [0.3, 0.6, 0.4, 0.8, 0.5, 0.7, 0.3, 0.9, 0.6, 0.4]
+  onEndCall, // This is now optional
+  waveformData = [0.3, 0.6, 0.4, 0.8, 0.5, 0.7, 0.3, 0.9, 0.6, 0.4],
+  isWaitingForAssistant = false,
+  isInitializing = false,
+  isSaving = false // Add saving state
 }: VapiHUDProps) {
   const [showWaveform, setShowWaveform] = useState(true);
 
@@ -56,28 +62,32 @@ export function VapiHUD({
             )}
           </AnimatePresence>
 
-          {/* Control buttons */}
+          {/* Single Control button */}
           <div className="flex items-center gap-4">
-            {/* Mic toggle button */}
+            {/* Unified Toggle button */}
             <motion.button
               onClick={onToggleRecording}
+              disabled={isWaitingForAssistant || isInitializing || isSaving}
               className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all ${
                 isRecording 
                   ? 'bg-gradient-to-br from-red-500 to-crimson-600' 
                   : 'bg-gradient-to-br from-violet-600 to-purple-700'
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              aria-label={isRecording ? 'Mute microphone' : 'Unmute microphone'}
+              } ${(isWaitingForAssistant || isInitializing || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              whileHover={{ scale: (isWaitingForAssistant || isInitializing || isSaving) ? 1 : 1.1 }}
+              whileTap={{ scale: (isWaitingForAssistant || isInitializing || isSaving) ? 1 : 0.95 }}
+              aria-label={isRecording ? 'End call' : 'Start call'}
             >
-              {isRecording ? (
-                <Mic className="text-white" size={28} />
+              {isInitializing || isSaving ? (
+                // Show loader when initializing or saving
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : isRecording ? (
+                <Phone className="text-white rotate-135" size={28} />
               ) : (
-                <MicOff className="text-white" size={28} />
+                <Mic className="text-white" size={28} />
               )}
               
               {/* Pulse effect when recording */}
-              {isRecording && (
+              {isRecording && !isWaitingForAssistant && !isInitializing && !isSaving && (
                 <>
                   <motion.div
                     className="absolute inset-0 rounded-full border-2 border-red-400"
@@ -107,28 +117,27 @@ export function VapiHUD({
                 </>
               )}
             </motion.button>
-
-            {/* End call button */}
-            <motion.button
-              onClick={onEndCall}
-              className="w-16 h-16 rounded-full bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center glitch-hover"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              aria-label="End call"
-            >
-              <Phone className="text-white rotate-135" size={28} />
-            </motion.button>
           </div>
 
-          {/* Recording indicator */}
-          {isRecording && (
+          {/* Status indicator */}
+          {(isRecording || isInitializing || isSaving) && (
             <motion.div
               className="flex items-center gap-2 text-sm text-red-400"
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
               <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>Recording</span>
+              <span>
+                {isSaving
+                  ? "Saving session..."
+                  : isInitializing
+                  ? "Initializing..."
+                  : isWaitingForAssistant 
+                  ? "Waiting for assistant..." 
+                  : isRecording 
+                  ? "Recording - Click to end" 
+                  : ""}
+              </span>
             </motion.div>
           )}
         </div>
