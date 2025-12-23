@@ -21,3 +21,8 @@ vapiClient.on("error", (e) => eventHandler("error", e));
 vapiClient.on("speech-start", () => eventHandler("speech-start", undefined));
 vapiClient.on("speech-end", () => eventHandler("speech-end", undefined));
 vapiClient.on("volume-level", (v) => eventHandler("volume-level", v));
+
+// Add a method to check if the client is ready
+export const isVapiClientReady = () => {
+  return !!process.env.NEXT_PUBLIC_VAPI_API_KEY;
+};

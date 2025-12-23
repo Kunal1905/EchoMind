@@ -6,7 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Clock, Sparkles, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
-import { vapiClient } from "../../lib/vapiClient";
+import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
 import { EchoOrb } from "../../components/EchoOrb";
 import { v4 as uuidv4 } from "uuid";
@@ -207,6 +207,58 @@ export function ChatContent({
         setIsRecording(false);
         setIsWaitingForAssistant(false);
       }
+      
+      // Extract error message safely - handle different possible error structures
+      let errorMessage = "An unexpected error occurred";
+      
+      if (typeof error === 'object' && error !== null) {
+        // Check different possible error object structures
+        if (error.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        } else if (error.error && typeof error.error === 'object') {
+          // Handle when error.error is an object
+          if (error.error.message && typeof error.error.message === 'string') {
+            errorMessage = error.error.message;
+          } else if (error.error.error && typeof error.error.error === 'string') {
+            errorMessage = error.error.error;
+          } else if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          } else if (error.error && typeof error.error === 'object' && error.error.message) {
+            // If error.message is an object, try to convert it to string
+            errorMessage = typeof error.error.message === 'object' 
+              ? JSON.stringify(error.error.message) 
+              : String(error.error.message);
+          }
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else {
+          // If error object doesn't have expected properties, try to stringify it
+          errorMessage = JSON.stringify(error);
+        }
+      }
+      
+      // Ensure errorMessage is a string before calling toLowerCase
+      if (typeof errorMessage !== 'string') {
+        errorMessage = String(errorMessage);
+      }
+      
+      // Provide more user-friendly error messages based on the error content
+      if (errorMessage.toLowerCase().includes("assistant not found")) {
+        console.error("Assistant configuration error. Please verify your assistant ID is correct and properly configured in the VAPI dashboard.");
+        alert("Assistant configuration error. Please contact support to resolve this issue.");
+      } else if (errorMessage.toLowerCase().includes("400")) {
+        console.error("Bad request error. This may be due to an invalid assistant configuration.");
+        alert("Configuration error. Please try again or contact support.");
+      } else if (errorMessage.toLowerCase().includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
+        console.error("Authentication error. Please verify your API key is correct and has proper permissions.");
+        alert("Authentication error. Please verify your API key is correct.");
+      } else if (errorMessage.toLowerCase().includes("403")) {
+        console.error("Access forbidden. Please check your VAPI account permissions.");
+        alert("Access error. Please check your account permissions.");
+      } else {
+        console.error("An unexpected error occurred:", errorMessage);
+        alert(`An error occurred: ${errorMessage}`);
+      }
     };
 
     vapi.on("call-start", onCallStart);
@@ -249,7 +301,11 @@ export function ChatContent({
   /* ---------------- MIC HANDLER ---------------- */
   const toggleRecording = () => {
     const vapi = vapiRef.current;
-    if (!vapi) return;
+    if (!vapi || !isVapiClientReady()) {
+      console.error("VAPI client not initialized or missing API key");
+      alert("VAPI client not ready. Please check your configuration.");
+      return;
+    }
 
     // ✅ ALWAYS allow stop
     if (isRecording) {
@@ -274,12 +330,54 @@ export function ChatContent({
       return;
     }
 
+    // Validate that assistant ID exists and is properly formatted before starting
+    if (!ASSISTANT_ID) {
+      console.error("Missing assistant ID. Please set NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID in your environment variables.");
+      alert("Configuration error: Assistant ID not found. Please contact support.");
+      return;
+    }
+
+    // Check for common formatting issues (like line breaks or special characters)
+    if (ASSISTANT_ID.includes('\n') || ASSISTANT_ID.includes('\r') || ASSISTANT_ID.includes(' ')) {
+      console.error("Assistant ID contains invalid characters (newlines, spaces). This may indicate the environment variable has formatting issues.");
+      alert("Configuration error: Assistant ID contains invalid characters. Please check your environment variables for proper formatting.");
+      return;
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(ASSISTANT_ID)) {
+      console.error("Invalid assistant ID format. Current value:", ASSISTANT_ID);
+      console.error("Length:", ASSISTANT_ID.length);
+      console.error("Please verify your assistant ID is a valid UUID in your environment variables. It may have line breaks or be truncated.");
+      alert("Configuration error: Invalid assistant ID format. Please check your environment variables for line breaks or truncation.");
+      return;
+    }
+
+    // Validate API key format
+    if (API_KEY.includes('\n') || API_KEY.includes('\r') || API_KEY.includes(' ')) {
+      console.error("API key contains invalid characters (newlines, spaces). This may indicate the environment variable has formatting issues.");
+      alert("Configuration error: API key contains invalid characters. Please check your environment variables for proper formatting.");
+      return;
+    }
+
+    const apiKeyRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!apiKeyRegex.test(API_KEY)) {
+      console.error("Invalid API key format. Current value:", API_KEY);
+      console.error("Length:", API_KEY.length);
+      console.error("Please verify your API key is a valid UUID in your environment variables. It may have line breaks or be truncated.");
+      alert("Configuration error: Invalid API key format. Please check your environment variables for line breaks or truncation.");
+      return;
+    }
+
     setIsInitializing(true);
     try {
+      console.log("Starting VAPI call with assistant ID:", ASSISTANT_ID);
       vapi.start(ASSISTANT_ID);
     } catch (err) {
       console.error("Failed to start call:", err);
       setIsInitializing(false);
+      alert("Failed to start session. Please try again later.");
     }
   };
 
@@ -293,7 +391,7 @@ export function ChatContent({
 
   /* ---------------- UI ---------------- */
   return (
-    <div className="min-h-screen neural-bg pt-20 pb-32 px-4">
+    <div className="min-h-screen neural-bg pt-20 px-4 pb-40"> {/* Increased pb-40 to ensure space for the mic button */}
       {/* Header */}
       <div className="container mx-auto max-w-4xl mb-6">
         <div className="flex items-center justify-between">
@@ -341,7 +439,7 @@ export function ChatContent({
               )}
 
               {/* Messages Container */}
-              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] bg-gray-900/20">
+              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-900/20">
                 {!canStartSession() && isPremium ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-600/20 to-red-600/20 flex items-center justify-center border border-amber-500/30">
@@ -457,16 +555,18 @@ export function ChatContent({
             )}
           </AnimatePresence>
 
-          {/* HUD */}
+          {/* HUD - Now positioned below chat in the flow instead of fixed */}
           <div className="mt-6 w-full max-w-2xl">
             <div className="flex justify-center">
-              <VapiHUD
-                isRecording={isRecording}
-                onToggleRecording={toggleRecording}
-                isInitializing={isInitializing}
-                isWaitingForAssistant={isWaitingForAssistant}
-                isSaving={isSaving}
-              />
+              <div className="relative"> {/* Wrapper to contain the HUD without fixed positioning */}
+                <VapiHUD
+                  isRecording={isRecording}
+                  onToggleRecording={toggleRecording}
+                  isInitializing={isInitializing}
+                  isWaitingForAssistant={isWaitingForAssistant}
+                  isSaving={isSaving}
+                />
+              </div>
             </div>
           </div>
         </div>

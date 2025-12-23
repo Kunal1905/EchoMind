@@ -27,7 +27,7 @@ export function VapiHUD({
 
   return (
     <motion.div
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 sm:static sm:translate-x-0 sm:bottom-0"
+      className="relative z-10" // Changed from fixed positioning to relative
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
