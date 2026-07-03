@@ -4,12 +4,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Clock, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
 import { EchoOrb } from "../../components/EchoOrb";
 import { v4 as uuidv4 } from "uuid";
+import api from "@/app/lib/api";
 
 interface Message {
   id: string;
@@ -46,41 +47,12 @@ export function ChatContent({
   const [isWaitingForAssistant, setIsWaitingForAssistant] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const vapiRef = useRef<Vapi | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const saveAttemptedRef = useRef(false);
 
   const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY!;
-  const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID!;
-
-  // Function to generate session summary
-  const generateSessionSummary = async (conversation: Message[]) => {
-    if (conversation.length === 0) return "No conversation data available.";
-
-    // Extract user messages for summary
-    const userMessages = conversation
-      .filter((msg) => msg.sender === "user")
-      .map((msg) => msg.text)
-      .join(" ");
-
-    // Simple summary generation logic
-    const wordCount = userMessages.split(" ").length;
-
-    if (wordCount < 10) {
-      return "Brief session with minimal conversation.";
-    }
-
-    if (wordCount < 50) {
-      return "Short conversation covering initial thoughts and feelings.";
-    } else if (wordCount < 150) {
-      return "Moderate conversation exploring key concerns and emotions.";
-    } else {
-      return "Detailed session discussing various aspects of emotional wellbeing and personal challenges.";
-    }
-  };
 
   /* ---------------- INIT VAPI ---------------- */
   useEffect(() => {
@@ -107,12 +79,6 @@ export function ChatContent({
       setIsSaving(true);
       onSessionComplete();
 
-      // Generate summary before saving
-      setIsGeneratingSummary(true);
-      const generatedSummary = await generateSessionSummary(messagesRef.current);
-      setSummary(generatedSummary);
-      setIsGeneratingSummary(false);
-
       // ensure we only try to save once
       if (saveAttemptedRef.current) {
         setIsSaving(false);
@@ -125,31 +91,14 @@ export function ChatContent({
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
 
-        // Format duration as HH:MM:SS
-        const formatDuration = (seconds: number): string => {
-          const hrs = Math.floor(seconds / 3600);
-          const mins = Math.floor((seconds % 3600) / 60);
-          const secs = seconds % 60;
-          return `${hrs.toString().padStart(2, "0")}:${mins
-            .toString()
-            .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-        };
-
-        const durationStr = formatDuration(sessionTime);
-
-        const response = await fetch("/api/session-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: sessionIdRef.current,
-            notes,
-            summary: generatedSummary,
-            duration: durationStr,
-          }),
+        const response = await api.post("/api/session-chat", {
+          sessionId: sessionIdRef.current,
+          notes,
+          durationSec: sessionTime,
         });
 
-        if (!response.ok) {
-          console.error("Save failed", await response.json());
+        if (response.status !== 200 && response.status !== 201) {
+          console.error("Save failed", response.data);
         } else {
           onNavigate("history");
         }
@@ -288,16 +237,6 @@ export function ChatContent({
     }
   }, [messages]);
 
-  // Check if user can start a session
-  const canStartSession = () => {
-    // For premium users, check if they have calls remaining
-    if (isPremium) {
-      return premiumCalls > 0;
-    }
-    // For free users, check session limit
-    return freeTrialUsed < freeTrialLimit;
-  };
-
   /* ---------------- MIC HANDLER ---------------- */
   const toggleRecording = () => {
     const vapi = vapiRef.current;
@@ -314,70 +253,42 @@ export function ChatContent({
       return;
     }
 
-    // Check if user can start a session
-    if (!canStartSession()) {
-      if (isPremium) {
-        alert(
-          "You've used all your premium calls. Please add more calls to continue."
-        );
-        onNavigate("sessions");
-      } else {
-        alert(
-          `You've used all ${freeTrialLimit} free trial sessions. Upgrade to premium to continue.`
-        );
-        onNavigate("sessions");
-      }
-      return;
-    }
+    // Start new session
+    startVoiceSession();
+  };
 
-    // Validate that assistant ID exists and is properly formatted before starting
-    if (!ASSISTANT_ID) {
-      console.error("Missing assistant ID. Please set NEXT_PUBLIC_VAPI_VOICE_ASSISTANT_ID in your environment variables.");
-      alert("Configuration error: Assistant ID not found. Please contact support.");
-      return;
-    }
-
-    // Check for common formatting issues (like line breaks or special characters)
-    if (ASSISTANT_ID.includes('\n') || ASSISTANT_ID.includes('\r') || ASSISTANT_ID.includes(' ')) {
-      console.error("Assistant ID contains invalid characters (newlines, spaces). This may indicate the environment variable has formatting issues.");
-      alert("Configuration error: Assistant ID contains invalid characters. Please check your environment variables for proper formatting.");
-      return;
-    }
-
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(ASSISTANT_ID)) {
-      console.error("Invalid assistant ID format. Current value:", ASSISTANT_ID);
-      console.error("Length:", ASSISTANT_ID.length);
-      console.error("Please verify your assistant ID is a valid UUID in your environment variables. It may have line breaks or be truncated.");
-      alert("Configuration error: Invalid assistant ID format. Please check your environment variables for line breaks or truncation.");
-      return;
-    }
-
-    // Validate API key format
-    if (API_KEY.includes('\n') || API_KEY.includes('\r') || API_KEY.includes(' ')) {
-      console.error("API key contains invalid characters (newlines, spaces). This may indicate the environment variable has formatting issues.");
-      alert("Configuration error: API key contains invalid characters. Please check your environment variables for proper formatting.");
-      return;
-    }
-
-    const apiKeyRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!apiKeyRegex.test(API_KEY)) {
-      console.error("Invalid API key format. Current value:", API_KEY);
-      console.error("Length:", API_KEY.length);
-      console.error("Please verify your API key is a valid UUID in your environment variables. It may have line breaks or be truncated.");
-      alert("Configuration error: Invalid API key format. Please check your environment variables for line breaks or truncation.");
-      return;
-    }
-
+  const startVoiceSession = async () => {
+    if (isRecording || isInitializing) return;
     setIsInitializing(true);
+
     try {
-      console.log("Starting VAPI call with assistant ID:", ASSISTANT_ID);
-      vapi.start(ASSISTANT_ID);
-    } catch (err) {
-      console.error("Failed to start call:", err);
+      // 1. Ask server for call config (checks minutes balance, injects memory)
+      const tokenRes = await api.post("/api/vapi-token", {
+        sessionId: sessionIdRef.current ?? undefined,
+      });
+
+      if (tokenRes.status === 402) {
+        alert("You have no minutes remaining. Please upgrade your plan.");
+        onNavigate("sessions");
+        setIsInitializing(false);
+        return;
+      }
+
+      const { assistant, sessionId: serverSessionId } = tokenRes.data;
+
+      // Store the session ID from the server (has userId in metadata)
+      sessionIdRef.current = serverSessionId;
+
+      // 2. Start Vapi with the full assistant config from server
+      const vapi = vapiRef.current;
+      if (!vapi) throw new Error("Vapi not initialized");
+
+      vapi.start(assistant); // Pass the full assistant object, not just an ID
+
+    } catch (err: any) {
+      console.error("Failed to start session:", err);
       setIsInitializing(false);
-      alert("Failed to start session. Please try again later.");
+      alert("Failed to start session. Please try again.");
     }
   };
 
@@ -422,62 +333,11 @@ export function ChatContent({
                 </span>
               </div>
 
-              {/* Summary section - shown when session ends */}
-              {summary && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-violet-900/40 to-teal-900/40 rounded-xl border border-violet-500/30">
-                  <h4 className="font-bold text-violet-300 mb-2 flex items-center gap-2">
-                    <Sparkles className="text-yellow-400" /> Session Summary
-                  </h4>
-                  <p className="text-gray-200">{summary}</p>
-                  {isGeneratingSummary && (
-                    <p className="text-gray-400 italic mt-2 flex items-center gap-2">
-                      <Loader2 className="animate-spin" size={16} /> Generating
-                      detailed summary...
-                    </p>
-                  )}
-                </div>
-              )}
+
 
               {/* Messages Container */}
               <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-900/20">
-                {!canStartSession() && isPremium ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-600/20 to-red-600/20 flex items-center justify-center border border-amber-500/30">
-                      <span className="text-4xl">⚠️</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-amber-300">
-                      Premium Calls Exhausted
-                    </h3>
-                    <p className="text-gray-400 max-w-md">
-                      You've used all your premium calls. Please add more calls to
-                      continue your therapy sessions.
-                    </p>
-                    <button
-                      onClick={() => onNavigate("sessions")}
-                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-500 rounded-full hover:from-amber-400 hover:to-red-400 transition-all"
-                    >
-                      Add More Calls
-                    </button>
-                  </div>
-                ) : !canStartSession() && !isPremium ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-600/20 to-purple-600/20 flex items-center justify-center border border-violet-500/30">
-                      <span className="text-4xl">⭐</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-violet-300">
-                      Free Trial Completed
-                    </h3>
-                    <p className="text-gray-400 max-w-md">
-                      {`You've used all ${freeTrialLimit} free trial sessions. Upgrade to premium to continue your therapy journey.`}
-                    </p>
-                    <button
-                      onClick={() => onNavigate("sessions")}
-                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full hover:from-violet-500 hover:to-purple-500 transition-all"
-                    >
-                      Upgrade to Premium
-                    </button>
-                  </div>
-                ) : messages.length === 0 ? (
+                {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <EchoOrb size="lg" isPulsing={isRecording} />
                     <p className="text-gray-400 animate-pulse text-lg">

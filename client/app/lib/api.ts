@@ -9,9 +9,13 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const { userId } = await auth();
-  if (userId) {
-    config.headers.Authorization = `Bearer ${userId}`;
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      config.headers.Authorization = `Bearer ${userId}`;
+    }
+  } catch (error) {
+    console.warn("[api] Could not get Clerk session token:", error)
   }
   return config;
 });

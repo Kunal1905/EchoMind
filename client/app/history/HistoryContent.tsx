@@ -128,7 +128,15 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
             <h3 className="flex items-center gap-3 text-xl font-bold text-violet-300 mb-4">
               <Sparkles className="text-yellow-400" /> Mood Timeline
             </h3>
-            <MoodChart entries={moodEntries} />
+            <MoodChart entries={moodEntries.map(entry => ({
+              id: entry.id,
+              userId: entry.userId,
+              sessionId: entry.sessionId,
+              moodScore: entry.moodScore,
+              createdAt: entry.createdAt,
+              date: new Date(entry.createdAt).toLocaleDateString(),
+              score: entry.moodScore
+            }))} />
           </motion.div>
         )}
 
