@@ -5,7 +5,7 @@ import { db } from "../config/db";
 import { sessionChatTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { generateSessionSummaryWithFallback } from "../lib/sessionSummary";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -47,8 +47,17 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
       const result = await db
         .select()
         .from(sessionChatTable)
-        .where(eq(sessionChatTable.sessionId, sessionId as string));
-      return res.json(result[0] || null);
+        .where(
+          and(
+            eq(sessionChatTable.sessionId, sessionId as string),
+            eq(sessionChatTable.createdBy, req.authUserId!)   // ← this line was missing
+          )
+        );
+
+      if (!result[0]) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      return res.json(result[0]);
     } else {
       const result = await db
         .select()
