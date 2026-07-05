@@ -91,7 +91,7 @@ export function ChatContent({
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
 
-        const response = await api.post("/api/session-chat", {
+        const response = await api.post("/session-chat", {
           sessionId: sessionIdRef.current,
           notes,
           durationSec: sessionTime,
@@ -263,7 +263,7 @@ export function ChatContent({
 
     try {
       // 1. Ask server for call config (checks minutes balance, injects memory)
-      const tokenRes = await api.post("/api/vapi-token", {
+      const tokenRes = await api.post("/vapi-token", {
         sessionId: sessionIdRef.current ?? undefined,
       });
 

@@ -6,6 +6,7 @@ import HomeContent from "./home/HomeContent";
 import { ChatContent } from "./echo/[sessionId]/ChatContent";
 import { HistoryContent } from "./history/HistoryContent"
 import { SessionsContent } from "./premium/SessionsContent";
+import api from "./lib/api";
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -22,14 +23,14 @@ export default function Home() {
   useEffect(() => {
     const fetchSubscriptionData = async () => {
       try {
-        const response = await fetch("/api/subscription");
-        if (response.ok) {
-          const data = await response.json();
+        const response = await api.get("/subscription");
+        if (response.status >= 200 && response.status < 300) {
+          const data = response.data;
           setSubscriptionData({
             freeTrialUsed: data.freeTrialUsed || 0,
-            freeTrialLimit: data.freeTrialLimit || 3,
-            premiumCallsRemaining: data.premiumCallsRemaining || 0,
-            premiumCallsTotal: data.premiumCallsTotal || 0,
+            freeTrialLimit: data.freeTrialLimit || 5,
+            premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
+            premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
             isPremium: data.isPremium || false,
           });
         } else {
@@ -70,19 +71,19 @@ export default function Home() {
 
   const handleUpgrade = async (calls: number = 10) => {
     try {
-      const response = await fetch("/api/subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "addPremiumCalls", calls }),
+      const response = await api.post("/subscription", {
+        action: "addMinutes",
+        minutes: calls * 10,
+        plan: "premium",
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         setSubscriptionData({
           freeTrialUsed: data.freeTrialUsed || 0,
-          freeTrialLimit: data.freeTrialLimit || 3,
-          premiumCallsRemaining: data.premiumCallsRemaining || 0,
-          premiumCallsTotal: data.premiumCallsTotal || 0,
+          freeTrialLimit: data.freeTrialLimit || 5,
+          premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
+          premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
           isPremium: data.isPremium || false,
         });
       }
@@ -93,22 +94,15 @@ export default function Home() {
 
   const handleSessionComplete = async () => {
     try {
-      // Determine if this was a premium session based on the user's current state
-      const isPremiumSession = subscriptionData.isPremium && subscriptionData.premiumCallsRemaining > 0;
-      const action = isPremiumSession ? 'usePremiumCall' : 'useFreeCall';
-      const response = await fetch('/api/subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
+      const response = await api.get('/subscription');
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data;
         setSubscriptionData({
           freeTrialUsed: data.freeTrialUsed || 0,
-          freeTrialLimit: data.freeTrialLimit || 3,
-          premiumCallsRemaining: data.premiumCallsRemaining || 0,
-          premiumCallsTotal: data.premiumCallsTotal || 0,
+          freeTrialLimit: data.freeTrialLimit || 5,
+          premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
+          premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
           isPremium: data.isPremium || false,
         });
       }

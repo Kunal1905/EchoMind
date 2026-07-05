@@ -55,11 +55,7 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
         const array = Array.from(map.values()).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSessions(array);
         
-        const chartData = moodData.map((entry: MoodEntry) => ({
-          date: new Date(entry.createdAt).toLocaleDateString(),
-          score: entry.moodScore
-        }));
-        setMoodEntries(chartData);
+        setMoodEntries(moodData);
       } catch (err: any) {
         console.error("Error fetching data:", err);
         setError(err?.message || "Failed to load session history");
