@@ -3,6 +3,7 @@ import {
   ClerkProvider
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PHProvider } from "./PHProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,9 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          {children}
+          <PHProvider>
+            {children}
+          </PHProvider>
         </body>
       </html>
     </ClerkProvider>
   );
 }
+

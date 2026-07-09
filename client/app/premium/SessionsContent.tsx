@@ -2,12 +2,14 @@
 
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import { motion } from "motion/react";
+import { usePostHog } from "posthog-js/react";
 
 type SessionsContentProps = {
   onNavigate?: (page: string) => void;
-  onUpgrade?: (calls?: number) => void | Promise<void>;
+  onUpgrade?: (calls?: number, planName?: string, price?: string) => void | Promise<void>;
   isPremium?: boolean;
 };
+
 
 const plans = [
   {
@@ -35,6 +37,7 @@ export function SessionsContent({
   onUpgrade = async () => {},
   isPremium = false,
 }: SessionsContentProps) {
+  const posthog = usePostHog();
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pt-24 pb-24 px-4 text-white">
       <section className="mx-auto max-w-5xl">
@@ -84,9 +87,13 @@ export function SessionsContent({
                 </li>
               </ul>
               <button
-                onClick={() => onUpgrade(Math.ceil(plan.minutes / 10))}
+                onClick={() => {
+                  posthog.capture("upgrade_clicked", { planId: plan.name, price: plan.price });
+                  onUpgrade(Math.ceil(plan.minutes / 10), plan.name, plan.price);
+                }}
                 className={`flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r ${plan.accent} px-5 py-3 font-semibold text-white transition-transform hover:scale-[1.02]`}
               >
+
                 <Zap size={18} />
                 Add {plan.minutes} minutes
               </button>

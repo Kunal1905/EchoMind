@@ -11,6 +11,9 @@ import { VapiHUD } from "../../components/VapiHUD";
 import { EchoOrb } from "../../components/EchoOrb";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/app/lib/api";
+import { usePostHog } from "posthog-js/react";
+import { PrivacyConsentModal } from "../../components/PrivacyConsentModal";
+
 
 interface Message {
   id: string;
@@ -38,6 +41,7 @@ export function ChatContent({
   const { isSignedIn } = useUser();
   if (!isSignedIn) redirect("/sign-in");
 
+  const posthog = usePostHog();
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
@@ -48,11 +52,23 @@ export function ChatContent({
   const [isSaving, setIsSaving] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
 
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+
   const vapiRef = useRef<Vapi | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const saveAttemptedRef = useRef(false);
 
   const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY!;
+
+  // Load consent preference from localStorage on mount
+  useEffect(() => {
+    const pref = localStorage.getItem("memory_consent_preference");
+    if (pref) {
+      setConsentGranted(pref === "granted");
+    }
+  }, []);
+
 
   /* ---------------- INIT VAPI ---------------- */
   useEffect(() => {
@@ -71,6 +87,13 @@ export function ChatContent({
       setIsRecording(true);
       setIsInitializing(false);
       setIsWaitingForAssistant(true);
+
+      // Track Session Started in PostHog
+      posthog.capture("session_started", {
+        plan: isPremium ? "premium" : "free",
+        minutesRemaining: premiumCalls,
+        hasMemory: !!consentGranted,
+      });
     };
 
     const onCallEnd = async () => {
@@ -100,8 +123,15 @@ export function ChatContent({
         if (response.status !== 200 && response.status !== 201) {
           console.error("Save failed", response.data);
         } else {
+          // Track Session Completed in PostHog
+          posthog.capture("session_completed", {
+            durationSec: sessionTime,
+            plan: isPremium ? "premium" : "free",
+            hadIntention: false,
+          });
           onNavigate("history");
         }
+
       } catch (e) {
         console.error("Save failed", e);
       } finally {
@@ -253,11 +283,15 @@ export function ChatContent({
       return;
     }
 
-    // Start new session
-    startVoiceSession();
+    // Start new session after checking consent
+    if (consentGranted === null) {
+      setIsConsentModalOpen(true);
+    } else {
+      startVoiceSession(consentGranted);
+    }
   };
 
-  const startVoiceSession = async () => {
+  const startVoiceSession = async (consent: boolean = false) => {
     if (isRecording || isInitializing) return;
     setIsInitializing(true);
 
@@ -265,9 +299,16 @@ export function ChatContent({
       // 1. Ask server for call config (checks minutes balance, injects memory)
       const tokenRes = await api.post("/vapi-token", {
         sessionId: sessionIdRef.current ?? undefined,
+        memoryConsent: consent,
       });
 
       if (tokenRes.status === 402) {
+        // Track minutes exhausted in PostHog
+        posthog.capture("minutes_exhausted", {
+          plan: isPremium ? "premium" : "free",
+          minutesUsed: freeTrialUsed * 10,
+        });
+
         alert("You have no minutes remaining. Please upgrade your plan.");
         onNavigate("sessions");
         setIsInitializing(false);
@@ -286,11 +327,23 @@ export function ChatContent({
       vapi.start(assistant); // Pass the full assistant object, not just an ID
 
     } catch (err: any) {
-      console.error("Failed to start session:", err);
+      if (err.response?.status === 402) {
+        // Track minutes exhausted in PostHog
+        posthog.capture("minutes_exhausted", {
+          plan: isPremium ? "premium" : "free",
+          minutesUsed: freeTrialUsed * 10,
+        });
+
+        alert("You have no minutes remaining. Please upgrade your plan.");
+        onNavigate("sessions");
+      } else {
+        console.error("Failed to start session:", err);
+        alert("Failed to start session. Please try again.");
+      }
       setIsInitializing(false);
-      alert("Failed to start session. Please try again.");
     }
   };
+
 
   const formatTime = (s: number) => {
     const mm = Math.floor(s / 60)
@@ -429,10 +482,19 @@ export function ChatContent({
               </div>
             </div>
           </div>
+          <PrivacyConsentModal
+            isOpen={isConsentModalOpen}
+            onClose={() => setIsConsentModalOpen(false)}
+            onConsentGiven={(granted) => {
+              setConsentGranted(granted);
+              startVoiceSession(granted);
+            }}
+          />
         </div>
       </div>
     </div>
   );
 }
+
 
 export default ChatContent;

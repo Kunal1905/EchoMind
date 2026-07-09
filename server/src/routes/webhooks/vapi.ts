@@ -4,13 +4,14 @@ import { db } from "../../config/db";
 import { usersTable, sessionChatTable } from "../../config/schema";
 import { eq, sql } from "drizzle-orm";
 import { getRedis } from "../../lib/redis";
+import { trackServer } from "../../lib/analytics";
 
 const router = Router();
 
 router.post("/", async (req, res) => {
-  const rawBody  = req.body as Buffer;
+  const rawBody = req.body as Buffer;
   const signature = req.headers["x-vapi-signature"] as string | undefined;
-  const secret    = process.env.VAPI_WEBHOOK_SECRET;
+  const secret = process.env.VAPI_WEBHOOK_SECRET;
 
   // ✅ Verify Vapi HMAC signature
   if (secret) {
@@ -42,7 +43,7 @@ router.post("/", async (req, res) => {
     const durationMin = Math.ceil(durationSec / 60);
 
     // userId and sessionId come from metadata set in vapi-token.ts
-    const userId    = call?.metadata?.userId    as string | undefined;
+    const userId = call?.metadata?.userId as string | undefined;
     const sessionId = call?.metadata?.sessionId as string | undefined;
 
     if (!userId) {
@@ -54,9 +55,15 @@ router.post("/", async (req, res) => {
     await db.update(usersTable)
       .set({
         minutesRemaining: sql`GREATEST(${usersTable.minutesRemaining} - ${durationMin}, 0)`,
-        minutesTotal:     sql`${usersTable.minutesTotal} + ${durationMin}`,
+        minutesTotal: sql`${usersTable.minutesTotal} + ${durationMin}`,
       })
       .where(eq(usersTable.id, userId));
+
+    trackServer("minutes_deducted", userId, {
+      durationMin,
+      durationSec,
+      sessionId,
+    });
 
     // Update session duration if we know the sessionId
     if (sessionId && durationSec > 0) {
@@ -68,7 +75,7 @@ router.post("/", async (req, res) => {
     // Invalidate Redis balance cache
     const redis = getRedis();
     if (redis) {
-      await redis.del(`user:${userId}:balance`).catch(() => {});
+      await redis.del(`user:${userId}:balance`).catch(() => { });
     }
 
     console.log(`[vapi-webhook] -${durationMin} min from user ${userId} (${durationSec}s call)`);

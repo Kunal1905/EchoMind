@@ -5,6 +5,7 @@ import { usersTable } from "../../config/schema";
 import { eq, sql } from "drizzle-orm";
 import { PLANS, type PlanKey } from "../../config/plans";
 import { getRedis } from "../../lib/redis";
+import { trackServer } from "../../lib/analytics";
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.post("/", async (req, res) => {
   if (body.event === "payment.captured") {
     const notes = body.payload?.payment?.entity?.notes || {};
     const userId = notes.userId as string | undefined;
-    const plan   = notes.plan  as PlanKey | undefined;
+    const plan = notes.plan as PlanKey | undefined;
 
     if (!userId || !plan || !PLANS[plan]) {
       console.warn("[razorpay-webhook] Missing userId or invalid plan in notes:", notes);
@@ -56,14 +57,20 @@ router.post("/", async (req, res) => {
       .set({
         plan,
         minutesRemaining: sql`${usersTable.minutesRemaining} + ${planData.minutes}`,
-        minutesTotal:     sql`${usersTable.minutesTotal}     + ${planData.minutes}`,
+        minutesTotal: sql`${usersTable.minutesTotal}     + ${planData.minutes}`,
       })
       .where(eq(usersTable.id, userId));
+
+    trackServer("payment_captured_server", userId, {
+      plan,
+      amount: body.payload?.payment?.entity?.amount,
+      minutesAdded: planData.minutes,
+    });
 
     // Invalidate Redis balance cache
     const redis = getRedis();
     if (redis) {
-      await redis.del(`user:${userId}:balance`).catch(() => {});
+      await redis.del(`user:${userId}:balance`).catch(() => { });
     }
 
     console.log(`[razorpay-webhook] +${planData.minutes} min → user ${userId} (${plan})`);

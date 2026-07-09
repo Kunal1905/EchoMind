@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, ChevronDown, Loader2, MessageCircle, Brain, Sparkles, AlertTriangle } from 'lucide-react';
+import { Calendar, ChevronDown, Loader2, MessageCircle, Brain, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import api from "../lib/api";
 import { MoodChart } from "../components/MoodChart";
+import { usePostHog } from "posthog-js/react";
+
 
 interface Session {
   sessionId: string;
@@ -27,11 +29,33 @@ interface MoodEntry {
 
 export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false }: { onNavigate?: (p:string)=>void; isPremium?: boolean; }) {
   const { isLoaded, isSignedIn } = useUser();
+  const posthog = usePostHog();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!window.confirm("Are you sure you want to delete this session? This action cannot be undone.")) return;
+    try {
+      const response = await api.delete(`/session-chat/${sessionId}`);
+      if (response.status >= 200 && response.status < 300) {
+        // Remove from local states
+        setSessions(prev => prev.filter(s => s.sessionId !== sessionId));
+        setMoodEntries(prev => prev.filter(m => m.sessionId !== sessionId));
+        
+        // Track session deleted event
+        posthog.capture("session_deleted");
+      } else {
+        alert("Failed to delete session. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error deleting session:", err);
+      alert("Error deleting session. Please try again.");
+    }
+  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -188,26 +212,37 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <button
-                className="w-full p-5 flex justify-between items-center hover:bg-gray-700/30 transition-colors"
-                onClick={() => setExpandedSession(prev => prev === s.sessionId ? null : s.sessionId)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-2xl">🧠</div>
-                  <div className="text-left">
-                    <div className="flex items-center gap-2 text-white">
-                      <Calendar className="text-violet-400" size={16} />
-                      <span>{new Date(s.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-sm text-gray-400 mt-1">
-                      {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div className="flex items-center hover:bg-gray-700/30 transition-colors w-full pr-4">
+                <button
+                  className="flex-1 p-5 flex justify-between items-center text-left"
+                  onClick={() => setExpandedSession(prev => prev === s.sessionId ? null : s.sessionId)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="text-2xl">🧠</div>
+                    <div className="text-left">
+                      <div className="flex items-center gap-2 text-white">
+                        <Calendar className="text-violet-400" size={16} />
+                        <span>{new Date(s.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="text-sm text-gray-400 mt-1">
+                        {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
                   <ChevronDown className={`transform transition-transform ${expandedSession === s.sessionId ? "rotate-180" : ""} text-violet-400`} />
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSession(s.sessionId);
+                  }}
+                  className="p-3 text-gray-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+                  title="Delete session"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+
 
               <AnimatePresence>
                 {expandedSession === s.sessionId && (

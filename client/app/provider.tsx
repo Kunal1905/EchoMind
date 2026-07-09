@@ -3,6 +3,7 @@
 import { UserDetailContext } from "@/context/UserDetailContext";
 import { useUser } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 type UsersDetail = {
   name: string,
@@ -18,16 +19,26 @@ function Provider({
 }>) {
 
   const {user} = useUser();
+  const posthog = usePostHog();
   const [userDetail, setUserDetail] = useState<any>()
 
   useEffect(() => {
     if (user) {
+      const email = user.primaryEmailAddress?.emailAddress || "";
       setUserDetail({
         name: user.fullName || user.firstName || "User",
-        email: user.primaryEmailAddress?.emailAddress || "",
+        email,
+      });
+
+      // Identify the user in PostHog
+      posthog.identify(user.id, {
+        email,
+        name: user.fullName || user.firstName || "User",
+        createdAt: user.createdAt,
       });
     }
-  },[user])
+  }, [user, posthog]);
+
 
   return (
     <div>

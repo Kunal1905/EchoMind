@@ -7,9 +7,12 @@ import { ChatContent } from "./echo/[sessionId]/ChatContent";
 import { HistoryContent } from "./history/HistoryContent"
 import { SessionsContent } from "./premium/SessionsContent";
 import api from "./lib/api";
+import { usePostHog } from "posthog-js/react";
 
 export default function Home() {
+  const posthog = usePostHog();
   const [currentPage, setCurrentPage] = useState("home");
+
   const [subscriptionData, setSubscriptionData] = useState({
     freeTrialUsed: 0,
     freeTrialLimit: 3,
@@ -69,7 +72,7 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleUpgrade = async (calls: number = 10) => {
+  const handleUpgrade = async (calls: number = 10, planName?: string, price?: string) => {
     try {
       const response = await api.post("/subscription", {
         action: "addMinutes",
@@ -86,11 +89,18 @@ export default function Home() {
           premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
           isPremium: data.isPremium || false,
         });
+
+        // Track Payment Completed in PostHog
+        posthog.capture("payment_completed", {
+          planId: planName || "premium",
+          amount: price || (calls * 10).toString(),
+        });
       }
     } catch (error) {
       console.error("Error upgrading subscription:", error);
     }
   };
+
 
   const handleSessionComplete = async () => {
     try {

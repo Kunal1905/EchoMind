@@ -13,6 +13,7 @@ import clerkWebhookRouter   from "./routes/webhooks/clerk";
 import vapiWebhookRouter    from "./routes/webhooks/vapi";
 import razorpayWebhookRouter from "./routes/webhooks/razorpay";
 import summarizeQueueRouter from "./queue/summarize";
+import myDataRouter from "./routes/my-data"
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -44,6 +45,7 @@ app.use("/api/subscription",     subscriptionRouter);
 app.use("/api/generate-summary", generateSummaryRouter);
 app.use("/api/vapi-token",       vapiTokenRouter);
 app.use("/api/mood",             moodRouter);
+app.use("/api/my-data", myDataRouter);
 
 // Webhooks (raw body, no clerkMiddleware needed)
 app.use("/api/webhooks/clerk",    clerkWebhookRouter);

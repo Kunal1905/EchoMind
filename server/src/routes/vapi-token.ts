@@ -19,14 +19,16 @@ router.post("/", requireUser, async (req: AuthedRequest, res) => {
     const user = userData[0];
     const maxDurationSeconds = user.minutesRemaining * 60;
 
+    const { memoryConsent } = req.body;
     const redis = getRedis();
     let memory = "";
-    if (redis) {
+    if (memoryConsent && redis) {
       const storedMemory = await redis.get(`user:${userId}:memory`);
       if (storedMemory) {
         memory = storedMemory as string;
       }
     }
+
 
     const token = {
       assistant: {

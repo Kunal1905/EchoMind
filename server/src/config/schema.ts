@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users_table", {
   id: varchar("id").primaryKey(),
@@ -8,6 +8,8 @@ export const usersTable = pgTable("users_table", {
   plan: varchar("plan").default("free").notNull(),
   minutesRemaining: integer("minutes_remaining").default(5).notNull(),
   minutesTotal: integer("minutes_total").default(0).notNull(),
+  memoryConsent: boolean("memory_consent").default(false).notNull(),
+  memoryConsentAt: timestamp("memory_consent_at"),
 });
 
 export const sessionChatTable = pgTable("history", {

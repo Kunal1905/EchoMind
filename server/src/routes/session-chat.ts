@@ -2,10 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../config/db";
-import { sessionChatTable } from "../config/schema";
+import { sessionChatTable, moodEntriesTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { generateSessionSummaryWithFallback } from "../lib/sessionSummary";
 import { eq, desc, and } from "drizzle-orm";
+
 
 const router = Router();
 
@@ -75,4 +76,41 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
   }
 });
 
+router.delete("/:sessionId", requireUser, async (req: AuthedRequest, res) => {
+  try {
+    const sessionId = req.params.sessionId as string;
+    const userId = req.authUserId!;
+
+
+    // 1. Delete associated mood entries
+    await db
+      .delete(moodEntriesTable)
+      .where(
+        and(
+          eq(moodEntriesTable.sessionId, sessionId),
+          eq(moodEntriesTable.userId, userId)
+        )
+      );
+
+    // 2. Delete the session chat itself
+    await db
+      .delete(sessionChatTable)
+      .where(
+        and(
+          eq(sessionChatTable.sessionId, sessionId),
+          eq(sessionChatTable.createdBy, userId)
+        )
+      );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Session delete error:", error);
+    res.status(500).json({
+      error: "Failed to delete session",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
 export default router;
+
