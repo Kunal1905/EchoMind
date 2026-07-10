@@ -8,6 +8,7 @@ import { HistoryContent } from "./history/HistoryContent"
 import { SessionsContent } from "./premium/SessionsContent";
 import api from "./lib/api";
 import { usePostHog } from "posthog-js/react";
+import Script from "next/script";
 
 export default function Home() {
   const posthog = usePostHog();
@@ -72,34 +73,35 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleUpgrade = async (calls: number = 10, planName?: string, price?: string) => {
-    try {
-      const response = await api.post("/subscription", {
-        action: "addMinutes",
-        minutes: calls * 10,
-        plan: "premium",
-      });
+  const handleUpgrade = async (planId: "basic" | "pro" | "elite") => {
+  try {
+    // 1. Server creates the order — never trust client with order creation
+    const orderRes = await api.post("/subscription/create-order", { planId });
+    const { orderId, amount, currency } = orderRes.data;
 
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data;
-        setSubscriptionData({
-          freeTrialUsed: data.freeTrialUsed || 0,
-          freeTrialLimit: data.freeTrialLimit || 5,
-          premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
-          premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
-          isPremium: data.isPremium || false,
-        });
-
-        // Track Payment Completed in PostHog
-        posthog.capture("payment_completed", {
-          planId: planName || "premium",
-          amount: price || (calls * 10).toString(),
-        });
-      }
-    } catch (error) {
-      console.error("Error upgrading subscription:", error);
-    }
-  };
+    // 2. Open Razorpay checkout
+    const rzp = new (window as any).Razorpay({
+      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount, currency,
+      name:        "EchoMind",
+      description: `${planId} plan`,
+      order_id:    orderId,
+      handler: async () => {
+        // Payment verified by webhook — just refresh subscription data
+        const sub = await api.get("/subscription");
+        setSubscriptionData(sub.data);
+      },
+      prefill: {
+        name:  "",
+        email: "",
+      },
+      theme: { color: "#7C3AED" },
+    });
+    rzp.open();
+  } catch (err) {
+    console.error("Upgrade error:", err);
+  }
+};
 
 
   const handleSessionComplete = async () => {
@@ -158,7 +160,15 @@ export default function Home() {
       {currentPage === "sessions" && (
         <SessionsContent
           onNavigate={handleNavigate}
-          onUpgrade={handleUpgrade}
+          onUpgrade={(calls?: number, planName?: string) => {
+            const planMap: Record<string, "basic" | "pro" | "elite"> = {
+              "basic": "basic",
+              "pro": "pro", 
+              "elite": "elite"
+            };
+            const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
+            return handleUpgrade(mappedPlanId);
+          }}
           isPremium={subscriptionData.isPremium}
         />
       )}

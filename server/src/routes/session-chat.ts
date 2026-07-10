@@ -6,40 +6,59 @@ import { sessionChatTable, moodEntriesTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { generateSessionSummaryWithFallback } from "../lib/sessionSummary";
 import { eq, desc, and } from "drizzle-orm";
+import { perUserLimit } from "../middleware/per-user-rate-limit";
 
 
 const router = Router();
 
+// Replace the schema:
 const sessionChatSchema = z.object({
-  sessionId: z.string().min(1).optional(),
-  notes: z.string().min(20),
-  durationSec: z.number().int().optional().default(0),
+  sessionId: z.string().min(1).max(100).optional(),
+  notes: z.string().min(20).max(50_000),   // ✅ 50K chars ~ 10,000 words
+  durationSec: z.number().int().min(0).max(7200).optional().default(0),
 });
 
-router.post("/", requireUser, async (req: AuthedRequest, res) => {
-  try {
-    const { sessionId, notes, durationSec } = sessionChatSchema.parse(req.body);
-    const finalSessionId = sessionId || uuidv4();
-    const finalSummary = await generateSessionSummaryWithFallback(notes);
+router.post("/",
+  requireUser,
+  perUserLimit({ windowSec: 3600, max: 20, key: "session-save" }),
+  async (req: AuthedRequest, res) => {
+    try {
+      const { sessionId, notes, durationSec } = sessionChatSchema.parse(req.body);
+      const finalSessionId = sessionId || uuidv4();
 
-    await db.insert(sessionChatTable).values({
-      sessionId: finalSessionId,
-      createdBy: req.authUserId!,
-      notes,
-      summary: finalSummary,
-      durationSec,
-      createdAt: new Date(),
-    });
+      //save immediately don't wait for gemini 
+      await db.insert(sessionChatTable)
+        .values({
+          sessionId: finalSessionId,
+          createdBy: req.authUserId!,
+          notes,
+          summary: null,     // filled by async job
+          durationSec,
+          createdAt: new Date(),
+        })
+        .onConflictDoUpdate({  // ✅ idempotent — duplicate saves don't crash
+          target: sessionChatTable.sessionId,
+          set: { notes, durationSec },
+        });
 
-    res.json({ success: true, summary: finalSummary, sessionId: finalSessionId });
-  } catch (error) {
-    console.error("Session save error:", error);
-    res.status(500).json({
-      error: "Failed to save session",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-});
+      // ✅ Non-blocking background summary generation
+      const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 4000}`;
+      const queueSec = process.env.QUEUE_SECRET || "";
+      fetch(`${appUrl}/api/queue/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-queue-secret": queueSec },
+        body: JSON.stringify({ sessionId: finalSessionId, notes, userId: req.authUserId! }),
+      }).catch(err => console.error("[session-chat] queue enqueue failed:", err));
+
+      res.json({ success: true, sessionId: finalSessionId });
+    } catch (error) {
+      console.error("Session save error:", error);
+      res.status(500).json({
+        error: "Failed to save session",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
 
 router.get("/", requireUser, async (req: AuthedRequest, res) => {
   try {
