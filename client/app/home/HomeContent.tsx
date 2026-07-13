@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from 'motion/react';
-import { EchoOrb } from '../components/EchoOrb'; 
+import { EchoOrb } from '../components/EchoOrb';
 import { Sparkles, Clock, Zap, Shield, TrendingUp, Users, Crown, Timer } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { DisclaimerModal } from '../components/DisclaimerModal'; 
+import { DisclaimerModal } from '../components/DisclaimerModal';
 import { useRouter } from 'next/navigation';
 
 // Create a wrapper component that can be used both as a page and as a component
@@ -41,14 +41,14 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
   const features = [
     {
       icon: Sparkles,
-      title: '3 Free Calls',
-      description: '10 mins per session',
+      title: '5 Free Minutes',
+      description: 'Try Echo, no card required',
       color: 'from-violet-500 to-purple-600'
     },
     {
       icon: TrendingUp,
-      title: 'AI Sentiment Analysis',
-      description: 'Real-time emotion tracking',
+      title: 'Echo Remembers You',
+      description: 'References your past sessions',
       color: 'from-teal-500 to-cyan-600'
     },
     {
@@ -78,14 +78,10 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
         >
           {/* Premium Status Banner */}
           {isPremium && (
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600/30 to-yellow-600/30 border border-amber-500/50 rounded-full mb-4"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
+            <motion.div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600/30 to-yellow-600/30 border border-amber-500/50 rounded-full mb-4">
               <Crown className="text-yellow-400" size={16} />
               <span className="text-yellow-200 text-sm">
-                Premium Active • {premiumCalls} calls remaining
+                Premium Active • {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} remaining
               </span>
             </motion.div>
           )}
@@ -96,10 +92,10 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <EchoOrb 
-                sentiment="neutral" 
-                size="xl" 
-                isPulsing 
+              <EchoOrb
+                sentiment="neutral"
+                size="xl"
+                isPulsing
                 onClick={() => handleNavigation('chat')}
               />
             </motion.div>
@@ -115,12 +111,9 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
           </p>
 
           {/* Trial Badge */}
-          <motion.div
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600/30 to-teal-500/30 border border-violet-500/50 rounded-full mb-8 glitch-hover"
-            whileHover={{ scale: 1.05 }}
-          >
+          <motion.div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600/30 to-teal-500/30 border border-violet-500/50 rounded-full mb-8 glitch-hover">
             <Zap className="text-yellow-400" size={20} />
-            <span className="text-white">Free Trial: 3 free voice sessions</span>
+            <span className="text-white">Free Trial: 5 minutes, no card required</span>
           </motion.div>
 
           {/* CTA Button */}
@@ -174,11 +167,10 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               <button
                 key={index}
                 onClick={() => setCurrentFeature(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  currentFeature === index 
-                    ? 'bg-violet-400 w-8' 
+                className={`w-2 h-2 rounded-full transition-all ${currentFeature === index
+                    ? 'bg-violet-400 w-8'
                     : 'bg-gray-600 hover:bg-gray-500'
-                }`}
+                  }`}
                 aria-label={`View feature ${index + 1}`}
               />
             ))}
@@ -199,7 +191,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-2">
                 <Clock className="text-violet-400 mt-1 shrink-0" size={18} />
-                <span>3 voice sessions </span>
+                <span>5 minutes of voice sessions</span>
               </li>
               <li className="flex items-start gap-2">
                 <TrendingUp className="text-violet-400 mt-1 shrink-0" size={18} />
@@ -207,7 +199,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               </li>
               <li className="flex items-start gap-2">
                 <Users className="text-violet-400 mt-1 shrink-0" size={18} />
-                <span>Lifetime Session history </span>
+                <span>Lifetime session history</span>
               </li>
             </ul>
           </motion.div>
@@ -224,11 +216,11 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
             {isPremium ? (
               <div className="absolute top-4 right-4 px-3 py-1 bg-green-600 rounded-full text-xs flex items-center gap-1">
                 <Timer size={14} />
-                {premiumCalls} calls
+                {premiumCalls} min
               </div>
             ) : (
               <div className="absolute top-4 right-4 px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full text-xs">
-                ₹990 for 10 calls
+                From ₹249
               </div>
             )}
             <h3 className="mb-4 bg-gradient-to-r from-yellow-400 to-amber-400 bg-clip-text text-transparent">
@@ -237,11 +229,11 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
             <ul className="space-y-3 text-gray-300 mb-4">
               <li className="flex items-start gap-2">
                 <Sparkles className="text-amber-400 mt-1 shrink-0" size={18} />
-                <span><strong className="text-white">10</strong> voice sessions</span>
+                <span><strong className="text-white">30–120</strong> minutes per plan</span>
               </li>
               <li className="flex items-start gap-2">
                 <TrendingUp className="text-amber-400 mt-1 shrink-0" size={18} />
-                <span>Advanced AI sentiment insights</span>
+                <span>Echo remembers past sessions</span>
               </li>
               <li className="flex items-start gap-2">
                 <Shield className="text-amber-400 mt-1 shrink-0" size={18} />
@@ -252,7 +244,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               onClick={() => handleNavigation('sessions')}
               className="w-full px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full hover:from-yellow-400 hover:to-amber-400 transition-all"
             >
-              {isPremium ? 'Add More Calls' : 'Upgrade Now'}
+              {isPremium ? 'Add More Minutes' : 'Upgrade Now'}
             </button>
           </motion.div>
         </div>
@@ -273,7 +265,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
         </motion.div>
       </div>
 
-      <DisclaimerModal 
+      <DisclaimerModal
         isOpen={disclaimerOpen}
         onClose={() => setDisclaimerOpen(false)}
       />

@@ -4,9 +4,9 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "../config/db";
 import { sessionChatTable, moodEntriesTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
-import { generateSessionSummaryWithFallback } from "../lib/sessionSummary";
 import { eq, desc, and } from "drizzle-orm";
 import { perUserLimit } from "../middleware/per-user-rate-limit";
+import { getRedis } from "../lib/redis";
 
 
 const router = Router();
@@ -121,6 +121,9 @@ router.delete("/:sessionId", requireUser, async (req: AuthedRequest, res) => {
         )
       );
 
+    // Bust memory cache so deleted session no longer appears in future memory context
+    const redis = getRedis();
+    if (redis) await redis.del(`user:${req.authUserId!}:memory`).catch(() => { });
     res.json({ success: true });
   } catch (error) {
     console.error("Session delete error:", error);

@@ -74,40 +74,68 @@ export default function Home() {
   };
 
   const handleUpgrade = async (planId: "basic" | "pro" | "elite") => {
-  try {
-    // 1. Server creates the order — never trust client with order creation
-    const orderRes = await api.post("/subscription/create-order", { planId });
-    const { orderId, amount, currency } = orderRes.data;
+    if (typeof (window as any).Razorpay === "undefined") {
+      alert("Payment system is still loading. Please wait a moment and try again.");
+      return;
+    }
 
-    // 2. Open Razorpay checkout
-    const rzp = new (window as any).Razorpay({
-      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount, currency,
-      name:        "EchoMind",
-      description: `${planId} plan`,
-      order_id:    orderId,
-      handler: async () => {
-        // Payment verified by webhook — just refresh subscription data
-        const sub = await api.get("/subscription");
-        setSubscriptionData(sub.data);
-      },
-      prefill: {
-        name:  "",
-        email: "",
-      },
-      theme: { color: "#7C3AED" },
-    });
-    rzp.open();
-  } catch (err) {
-    console.error("Upgrade error:", err);
-  }
-};
+    try {
+      const orderRes = await api.post("/subscription/create-order", { planId });
+      const { orderId, amount, currency } = orderRes.data;
+
+      const rzp = new (window as any).Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount,
+        currency,
+        name: "EchoMind",
+        description: `${planId} plan`,
+        order_id: orderId,
+        handler: async () => {
+          try {
+            const sub = await api.get("/subscription");
+            // ✅ Map server shape correctly — this was also silently broken
+            setSubscriptionData({
+              freeTrialUsed: 0,
+              freeTrialLimit: 5,
+              premiumCallsRemaining: sub.data.minutesRemaining ?? 0,
+              premiumCallsTotal: sub.data.minutesTotal ?? 0,
+              isPremium: sub.data.isPremium ?? false,
+            });
+            alert("Payment successful! Your minutes have been added.");
+          } catch (e) {
+            console.error("Failed to refresh subscription after payment:", e);
+            alert("Payment succeeded, but we couldn't refresh your balance. Please reload the page.");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            console.log("Razorpay checkout closed by user");
+          },
+        },
+        prefill: { name: "", email: "" },
+        theme: { color: "#7C3AED" },
+      });
+
+      rzp.on("payment.failed", (response: any) => {
+        console.error("Payment failed:", response.error);
+        alert(`Payment failed: ${response.error.description || "Please try again."}`);
+      });
+
+      rzp.open();
+    } catch (err: any) {
+      console.error("Upgrade error:", err);
+      alert(
+        err.response?.data?.error ||
+        "Couldn't start the payment process. Please try again in a moment."
+      );
+    }
+  };
 
 
   const handleSessionComplete = async () => {
     try {
       const response = await api.get('/subscription');
-      
+
       if (response.status >= 200 && response.status < 300) {
         const data = response.data;
         setSubscriptionData({
@@ -163,7 +191,7 @@ export default function Home() {
           onUpgrade={(calls?: number, planName?: string) => {
             const planMap: Record<string, "basic" | "pro" | "elite"> = {
               "basic": "basic",
-              "pro": "pro", 
+              "pro": "pro",
               "elite": "elite"
             };
             const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";

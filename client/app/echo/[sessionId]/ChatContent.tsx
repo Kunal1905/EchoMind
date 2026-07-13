@@ -24,12 +24,11 @@ interface Message {
 }
 
 export function ChatContent({
-  onNavigate = () => {},
+  onNavigate = () => { },
   isPremium = false,
   premiumCalls = 0,
   freeTrialUsed = 0,
-  freeTrialLimit = 3,
-  onSessionComplete = () => {},
+  onSessionComplete = () => { },
 }: {
   onNavigate?: (page: string) => void;
   isPremium?: boolean;
@@ -54,6 +53,16 @@ export function ChatContent({
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+
+  //select language
+  const [language, setLanguage] = useState<"en" | "hi" | "mr" | "ta">("en");
+
+  const LANGUAGES = [
+    { code: "en", label: "English" },
+    { code: "hi", label: "हिंदी" },
+    { code: "mr", label: "मराठी" },
+    { code: "ta", label: "தமிழ்" },
+  ];
 
   const vapiRef = useRef<Vapi | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -186,10 +195,10 @@ export function ChatContent({
         setIsRecording(false);
         setIsWaitingForAssistant(false);
       }
-      
+
       // Extract error message safely - handle different possible error structures
       let errorMessage = "An unexpected error occurred";
-      
+
       if (typeof error === 'object' && error !== null) {
         // Check different possible error object structures
         if (error.message && typeof error.message === 'string') {
@@ -204,8 +213,8 @@ export function ChatContent({
             errorMessage = error.error;
           } else if (error.error && typeof error.error === 'object' && error.error.message) {
             // If error.message is an object, try to convert it to string
-            errorMessage = typeof error.error.message === 'object' 
-              ? JSON.stringify(error.error.message) 
+            errorMessage = typeof error.error.message === 'object'
+              ? JSON.stringify(error.error.message)
               : String(error.error.message);
           }
         } else if (typeof error === 'string') {
@@ -215,12 +224,12 @@ export function ChatContent({
           errorMessage = JSON.stringify(error);
         }
       }
-      
+
       // Ensure errorMessage is a string before calling toLowerCase
       if (typeof errorMessage !== 'string') {
         errorMessage = String(errorMessage);
       }
-      
+
       // Provide more user-friendly error messages based on the error content
       if (errorMessage.toLowerCase().includes("assistant not found")) {
         console.error("Assistant configuration error. Please verify your assistant ID is correct and properly configured in the VAPI dashboard.");
@@ -300,6 +309,7 @@ export function ChatContent({
       const tokenRes = await api.post("/vapi-token", {
         sessionId: sessionIdRef.current ?? undefined,
         memoryConsent: consent,
+        language
       });
 
       if (tokenRes.status === 402) {
@@ -326,21 +336,45 @@ export function ChatContent({
 
       vapi.start(assistant); // Pass the full assistant object, not just an ID
 
+      // client/app/echo/[sessionId]/ChatContent.tsx — replace the catch block in startVoiceSession:
     } catch (err: any) {
-      if (err.response?.status === 402) {
-        // Track minutes exhausted in PostHog
+      setIsInitializing(false);
+
+      // No response at all = network/CORS failure, not a server error
+      if (!err.response) {
+        console.error("[startVoiceSession] Network/CORS error:", err.message);
+        alert(
+          "Couldn't reach the server. Please check your internet connection and try again. " +
+          "If this keeps happening, the app may be temporarily down."
+        );
+        return;
+      }
+
+      const status = err.response.status;
+
+      if (status === 402) {
         posthog.capture("minutes_exhausted", {
           plan: isPremium ? "premium" : "free",
           minutesUsed: freeTrialUsed * 10,
         });
-
         alert("You have no minutes remaining. Please upgrade your plan.");
         onNavigate("sessions");
-      } else {
-        console.error("Failed to start session:", err);
-        alert("Failed to start session. Please try again.");
+        return;
       }
-      setIsInitializing(false);
+
+      if (status === 429) {
+        alert("You're starting sessions too quickly. Please wait 30 seconds and try again.");
+        return;
+      }
+
+      if (status === 401) {
+        alert("Your session has expired. Please refresh the page and sign in again.");
+        return;
+      }
+
+      // Genuine server error — log full details for debugging, show generic message to user
+      console.error("[startVoiceSession] Server error:", status, err.response.data);
+      alert("Something went wrong starting your session. Please try again in a moment.");
     }
   };
 
@@ -393,6 +427,28 @@ export function ChatContent({
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <EchoOrb size="lg" isPulsing={isRecording} />
+                    {!isRecording && !isInitializing && (
+                      <div className="flex justify-center gap-2 mb-4">
+                        {LANGUAGES.map((l) => (
+                          <button
+                            key={l.code}
+                            onClick={() => setLanguage(l.code as any)}
+                            className={`px-4 py-2 rounded-full text-sm transition-all ${language === l.code
+                              ? "bg-violet-600 text-white"
+                              : "bg-gray-800/60 text-gray-400 hover:text-white"
+                              }`}
+                          >
+                            {l.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!isRecording && premiumCalls <= 3 && premiumCalls > 0 && (
+                      <p className="text-amber-400 text-sm text-center mb-2">
+                        ⏱️ You have {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} left. This session will end
+                        automatically when your time runs out.
+                      </p>
+                    )}
                     <p className="text-gray-400 animate-pulse text-lg">
                       {isRecording
                         ? "🎙️ Waiting for assistant to respond..."
@@ -409,18 +465,16 @@ export function ChatContent({
                       {messages.map((msg) => (
                         <div
                           key={msg.id}
-                          className={`flex ${
-                            msg.sender === "user"
-                              ? "justify-end"
-                              : "justify-start"
-                          }`}
+                          className={`flex ${msg.sender === "user"
+                            ? "justify-end"
+                            : "justify-start"
+                            }`}
                         >
                           <div
-                            className={`max-w-[85%] px-4 py-3 rounded-2xl border ${
-                              msg.sender === "user"
-                                ? "bg-gradient-to-r from-violet-600/30 to-violet-700/30 border-violet-500/40 text-white rounded-br-none"
-                                : "bg-gray-800/60 border-gray-700/40 text-gray-200 rounded-bl-none"
-                            }`}
+                            className={`max-w-[85%] px-4 py-3 rounded-2xl border ${msg.sender === "user"
+                              ? "bg-gradient-to-r from-violet-600/30 to-violet-700/30 border-violet-500/40 text-white rounded-br-none"
+                              : "bg-gray-800/60 border-gray-700/40 text-gray-200 rounded-bl-none"
+                              }`}
                           >
                             <p>{msg.text}</p>
                           </div>

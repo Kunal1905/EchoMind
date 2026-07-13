@@ -27,7 +27,7 @@ interface MoodEntry {
   createdAt: string;
 }
 
-export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false }: { onNavigate?: (p:string)=>void; isPremium?: boolean; }) {
+export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = false }: { onNavigate?: (p: string) => void; isPremium?: boolean; }) {
   const { isLoaded, isSignedIn } = useUser();
   const posthog = usePostHog();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -44,7 +44,7 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
         // Remove from local states
         setSessions(prev => prev.filter(s => s.sessionId !== sessionId));
         setMoodEntries(prev => prev.filter(m => m.sessionId !== sessionId));
-        
+
         // Track session deleted event
         posthog.capture("session_deleted");
       } else {
@@ -62,32 +62,48 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
       if (!isLoaded || !isSignedIn) return;
       setLoading(true);
       setError(null);
-      
-      try {
-        const [sessionsRes, moodRes] = await Promise.all([
-          api.get("/history"),
-          api.get("/mood")
-        ]);
-        
-        const sessionsData = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
-        const moodData = Array.isArray(moodRes.data) ? moodRes.data : [];
-        
+
+      // ✅ Use allSettled — one endpoint failing doesn't nuke the whole page
+      const [sessionsResult, moodResult] = await Promise.allSettled([
+        api.get("/history"),
+        api.get("/mood"),
+      ]);
+
+      // Sessions: only treat as a real error if it's a genuine failure (not just empty)
+      if (sessionsResult.status === "fulfilled") {
+        const sessionsData = Array.isArray(sessionsResult.value.data) ? sessionsResult.value.data : [];
         const map = new Map<string, Session>();
-        for (const s of sessionsData as Session[]) {
-          map.set(s.sessionId, s);
-        }
-        const array = Array.from(map.values()).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        for (const s of sessionsData as Session[]) map.set(s.sessionId, s);
+        const array = Array.from(map.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
         setSessions(array);
-        
-        setMoodEntries(moodData);
-      } catch (err: any) {
-        console.error("Error fetching data:", err);
-        setError(err?.message || "Failed to load session history");
-      } finally {
-        setLoading(false);
+      } else {
+        // Genuine failure fetching sessions — this is the only case that should show the error screen
+        const err: any = sessionsResult.reason;
+        console.error("Error fetching sessions:", err);
+
+        // Distinguish network failure from a real server error for a clearer message
+        if (!err.response) {
+          setError("Couldn't reach the server. Please check your connection and try again.");
+        } else if (err.response.status === 401) {
+          setError("Your session expired. Please refresh the page.");
+        } else {
+          setError("Something went wrong loading your history. Please try again.");
+        }
       }
+
+      // Mood: failing here should NEVER block the page — just show no mood chart
+      if (moodResult.status === "fulfilled") {
+        const moodData = Array.isArray(moodResult.value.data) ? moodResult.value.data : [];
+        setMoodEntries(moodData);
+      } else {
+        console.warn("Mood data unavailable (non-critical):", moodResult.reason);
+        setMoodEntries([]); // graceful — history page still works fine without mood chart
+      }
+
+      setLoading(false);
     };
-    
     fetchData();
   }, [isLoaded, isSignedIn]);
 
@@ -110,8 +126,8 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
         <AlertTriangle className="mx-auto mb-4 text-yellow-400" size={48} />
         <h2 className="text-2xl font-bold text-white mb-2">⚠️ Error Loading History</h2>
         <p className="text-gray-300 mb-4">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
         >
           Retry
@@ -194,7 +210,7 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
             <p className="text-gray-400 mb-6 max-w-md mx-auto">
               Your therapeutic journey begins with your first conversation. Start a session to see your history here.
             </p>
-            <button 
+            <button
               onClick={() => onNavigate("home")}
               className="px-6 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full text-white font-medium hover:from-violet-500 hover:to-teal-400 transition-all shadow-lg"
             >
@@ -205,8 +221,8 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
 
         <div className="space-y-4">
           {sessions.map((s, index) => (
-            <motion.div 
-              key={s.sessionId} 
+            <motion.div
+              key={s.sessionId}
               className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl overflow-hidden shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -246,7 +262,7 @@ export function HistoryContent({ onNavigate = (p:string)=>{}, isPremium = false 
 
               <AnimatePresence>
                 {expandedSession === s.sessionId && (
-                  <motion.div 
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}

@@ -14,6 +14,16 @@ const eventHandler = (event: string, data: any) => {
   console.log(`⚡ VAPI EVENT: ${event}`, data);
 };
 
+// ✅ Debug listeners ONLY in development
+// volume-level fires 20x/second — never log it in production
+if (process.env.NODE_ENV === "development") {
+  vapiClient.on("call-start", () => console.log("[vapi] call-start"));
+  vapiClient.on("call-end",   () => console.log("[vapi] call-end"));
+  vapiClient.on("error",      (e) => console.error("[vapi] error", e));
+  // volume-level intentionally excluded
+}
+
+
 vapiClient.on("call-start", () => eventHandler("call-start", undefined));
 vapiClient.on("call-end", () => eventHandler("call-end", undefined));
 vapiClient.on("message", (m) => eventHandler("message", m));
