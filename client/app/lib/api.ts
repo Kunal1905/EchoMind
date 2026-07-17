@@ -12,7 +12,12 @@ declare global {
   }
 }
 
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const defaultApiUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://echomind-1-de05.onrender.com/api"
+    : "http://localhost:4000/api";
+
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || defaultApiUrl;
 const baseURL = configuredApiUrl.replace(/\/$/, "").endsWith("/api")
   ? configuredApiUrl.replace(/\/$/, "")
   : `${configuredApiUrl.replace(/\/$/, "")}/api`;

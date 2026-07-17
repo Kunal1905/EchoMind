@@ -447,8 +447,9 @@ export function ChatContent({
         alert(
           "Couldn't reach the server. This usually means one of:\n" +
           "• The server is still starting up (free hosting spins down when idle — wait ~30s and retry)\n" +
+          "• The deployed frontend is missing NEXT_PUBLIC_API_URL\n" +
           "• Your internet / local dev server is down\n\n" +
-          "Open the browser Network tab: if the request URL is http://localhost:4000, the local server isn't running."
+          "For Vercel, set NEXT_PUBLIC_API_URL to your Render backend URL, then redeploy."
         );
         return;
       }
