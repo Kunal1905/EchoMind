@@ -45,7 +45,10 @@ app.use(helmet({
 
 // server/src/index.ts — replace the clientOrigin + cors block:
 
-const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "http://localhost:3000";
+const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "";
+const productionOrigins = [
+  "https://echo-mind-ncns-three.vercel.app",
+];
 
 // ✅ Support a comma-separated list, and defensively strip trailing slashes
 const allowedOrigins = rawOrigins
@@ -53,9 +56,13 @@ const allowedOrigins = rawOrigins
   .map((o) => o.trim().replace(/\/$/, "")) // strip any trailing slash
   .filter(Boolean);
 
+allowedOrigins.push(...productionOrigins);
+
 if (process.env.NODE_ENV !== "production") {
   allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
 }
+
+const uniqueAllowedOrigins = Array.from(new Set(allowedOrigins));
 
 app.use(cors({
   origin: (requestOrigin, callback) => {
@@ -63,12 +70,12 @@ app.use(cors({
     if (!requestOrigin) return callback(null, true);
 
     const cleaned = requestOrigin.replace(/\/$/, "");
-    if (allowedOrigins.includes(cleaned)) {
+    if (uniqueAllowedOrigins.includes(cleaned)) {
       return callback(null, true);
     }
 
-    console.warn(`[cors] Rejected origin: ${requestOrigin}`);
-    return callback(new Error("Not allowed by CORS"));
+    console.warn(`[cors] Rejected origin: ${requestOrigin}. Allowed origins: ${uniqueAllowedOrigins.join(", ")}`);
+    return callback(null, false);
   },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
