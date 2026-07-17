@@ -19,7 +19,15 @@ const eventHandler = (event: string, data: any) => {
 if (process.env.NODE_ENV === "development") {
   vapiClient.on("call-start", () => console.log("[vapi] call-start"));
   vapiClient.on("call-end",   () => console.log("[vapi] call-end"));
-  vapiClient.on("error",      (e) => console.error("[vapi] error", e));
+  vapiClient.on("error", (e: any) => {
+  console.error("========== VAPI ERROR ==========");
+  console.error("Full error:", e);
+  console.error("Stringified:", JSON.stringify(e, null, 2));
+  console.error("Message:", e?.message);
+  console.error("Status:", e?.status);
+  console.error("Response:", e?.response);
+  console.error("================================");
+});
   // volume-level intentionally excluded
 }
 

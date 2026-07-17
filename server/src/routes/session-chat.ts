@@ -4,9 +4,11 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "../config/db";
 import { sessionChatTable, moodEntriesTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { perUserLimit } from "../middleware/per-user-rate-limit";
 import { getRedis } from "../lib/redis";
+import { generateSessionSummaryWithFallback } from "../lib/sessionSummary";
+import { deductMinutesForDurationDelta } from "../lib/minutes";
 
 
 const router = Router();
@@ -14,7 +16,7 @@ const router = Router();
 // Replace the schema:
 const sessionChatSchema = z.object({
   sessionId: z.string().min(1).max(100).optional(),
-  notes: z.string().min(20).max(50_000),   // ✅ 50K chars ~ 10,000 words
+  notes: z.string().max(50_000).optional().default("No transcript captured for this session."),
   durationSec: z.number().int().min(0).max(7200).optional().default(0),
 });
 
@@ -23,34 +25,59 @@ router.post("/",
   perUserLimit({ windowSec: 3600, max: 20, key: "session-save" }),
   async (req: AuthedRequest, res) => {
     try {
-      const { sessionId, notes, durationSec } = sessionChatSchema.parse(req.body);
+      const parsedBody = sessionChatSchema.parse(req.body);
+      const { sessionId, durationSec } = parsedBody;
+      const notes = parsedBody.notes.trim() || "No transcript captured for this session.";
       const finalSessionId = sessionId || uuidv4();
+      const existingSession = await db
+        .select({ durationSec: sessionChatTable.durationSec })
+        .from(sessionChatTable)
+        .where(eq(sessionChatTable.sessionId, finalSessionId))
+        .limit(1);
+      const previousDurationSec = existingSession[0]?.durationSec ?? 0;
+      const finalDurationSec = Math.max(previousDurationSec, durationSec);
 
-      //save immediately don't wait for gemini 
+      //save immediately, respond fast
       await db.insert(sessionChatTable)
         .values({
           sessionId: finalSessionId,
           createdBy: req.authUserId!,
           notes,
-          summary: null,     // filled by async job
+          summary: null,     // filled right after, by the direct call below
           durationSec,
           createdAt: new Date(),
         })
         .onConflictDoUpdate({  // ✅ idempotent — duplicate saves don't crash
           target: sessionChatTable.sessionId,
-          set: { notes, durationSec },
+          set: {
+            createdBy: req.authUserId!,
+            notes,
+            durationSec: sql`GREATEST(${sessionChatTable.durationSec}, ${durationSec})`,
+          },
         });
 
-      // ✅ Non-blocking background summary generation
-      const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 4000}`;
-      const queueSec = process.env.QUEUE_SECRET || "";
-      fetch(`${appUrl}/api/queue/summarize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-queue-secret": queueSec },
-        body: JSON.stringify({ sessionId: finalSessionId, notes, userId: req.authUserId! }),
-      }).catch(err => console.error("[session-chat] queue enqueue failed:", err));
+      const deductedMinutes = await deductMinutesForDurationDelta(
+        req.authUserId!,
+        previousDurationSec,
+        finalDurationSec
+      );
+      if (deductedMinutes > 0) {
+        console.log(`[session-chat] -${deductedMinutes} min from user ${req.authUserId} (${finalDurationSec}s call)`);
+      }
 
-      res.json({ success: true, sessionId: finalSessionId });
+      res.json({ success: true, sessionId: finalSessionId, deductedMinutes, durationSec: finalDurationSec });
+
+      // ✅ Generate + store the summary AFTER responding, by calling the function
+      // directly (no HTTP round-trip to /api/queue/summarize that can 404 / fail
+      // silently). generateSessionSummaryWithFallback always returns a string
+      // (real Gemini summary, or a fallback if Gemini is over-quota/unavailable).
+      generateSessionSummaryWithFallback(notes)
+        .then((summary) =>
+          db.update(sessionChatTable)
+            .set({ summary })
+            .where(eq(sessionChatTable.sessionId, finalSessionId))
+        )
+        .catch((e) => console.error("[session-chat] summary generation failed:", e));
     } catch (error) {
       console.error("Session save error:", error);
       res.status(500).json({
@@ -135,4 +162,3 @@ router.delete("/:sessionId", requireUser, async (req: AuthedRequest, res) => {
 });
 
 export default router;
-

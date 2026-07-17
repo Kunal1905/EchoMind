@@ -9,63 +9,69 @@ import { SessionsContent } from "./premium/SessionsContent";
 import api from "./lib/api";
 import { usePostHog } from "posthog-js/react";
 import Script from "next/script";
+import { useAuth } from "@clerk/nextjs";
+
+const FREE_TRIAL_LIMIT = 5;
+
+const defaultSubscriptionData = {
+  freeTrialUsed: 0,
+  freeTrialLimit: FREE_TRIAL_LIMIT,
+  premiumCallsRemaining: FREE_TRIAL_LIMIT,
+  premiumCallsTotal: FREE_TRIAL_LIMIT,
+  isPremium: false,
+};
 
 export default function Home() {
   const posthog = usePostHog();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
 
-  const [subscriptionData, setSubscriptionData] = useState({
-    freeTrialUsed: 0,
-    freeTrialLimit: 3,
-    premiumCallsRemaining: 0,
-    premiumCallsTotal: 0,
-    isPremium: false,
-  });
+  const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
   const [loading, setLoading] = useState(true);
 
   // Fetch subscription data
   useEffect(() => {
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      setSubscriptionData(defaultSubscriptionData);
+      setLoading(false);
+      return;
+    }
+
     const fetchSubscriptionData = async () => {
       try {
-        const response = await api.get("/subscription");
+        const token = await getToken();
+        const response = await api.get("/subscription", token ? {
+          headers: { Authorization: `Bearer ${token}` },
+        } : undefined);
         if (response.status >= 200 && response.status < 300) {
           const data = response.data;
           setSubscriptionData({
             freeTrialUsed: data.freeTrialUsed || 0,
-            freeTrialLimit: data.freeTrialLimit || 5,
+            freeTrialLimit: data.freeTrialLimit || FREE_TRIAL_LIMIT,
             premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
-            premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
+            premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? FREE_TRIAL_LIMIT,
             isPremium: data.isPremium || false,
           });
         } else {
-          // Handle error response
           console.error("Failed to fetch subscription data:", response.status);
-          // Set default values
-          setSubscriptionData({
-            freeTrialUsed: 0,
-            freeTrialLimit: 3,
-            premiumCallsRemaining: 0,
-            premiumCallsTotal: 0,
-            isPremium: false,
-          });
+          setSubscriptionData(defaultSubscriptionData);
         }
-      } catch (error) {
-        console.error("Error fetching subscription data:", error);
-        // Set default values on error
-        setSubscriptionData({
-          freeTrialUsed: 0,
-          freeTrialLimit: 3,
-          premiumCallsRemaining: 0,
-          premiumCallsTotal: 0,
-          isPremium: false,
-        });
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          setSubscriptionData(defaultSubscriptionData);
+        } else {
+          console.error("Error fetching subscription data:", error);
+          setSubscriptionData(defaultSubscriptionData);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchSubscriptionData();
-  }, []);
+  }, [getToken, isLoaded, isSignedIn]);
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -73,14 +79,18 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleUpgrade = async (planId: "basic" | "pro" | "elite") => {
+  const handleUpgrade = async (planId: "basic" | "pro" | "premium") => {
     if (typeof (window as any).Razorpay === "undefined") {
       alert("Payment system is still loading. Please wait a moment and try again.");
       return;
     }
 
     try {
-      const orderRes = await api.post("/subscription/create-order", { planId });
+      const token = await getToken();
+      const authConfig = token ? {
+        headers: { Authorization: `Bearer ${token}` },
+      } : undefined;
+      const orderRes = await api.post("/subscription/create-order", { planId }, authConfig);
       const { orderId, amount, currency } = orderRes.data;
 
       const rzp = new (window as any).Razorpay({
@@ -92,14 +102,14 @@ export default function Home() {
         order_id: orderId,
         handler: async () => {
           try {
-            const sub = await api.get("/subscription");
+            const sub = await api.get("/subscription", authConfig);
             // ✅ Map server shape correctly — this was also silently broken
             setSubscriptionData({
-              freeTrialUsed: 0,
-              freeTrialLimit: 5,
               premiumCallsRemaining: sub.data.minutesRemaining ?? 0,
-              premiumCallsTotal: sub.data.minutesTotal ?? 0,
+              premiumCallsTotal: sub.data.minutesTotal ?? FREE_TRIAL_LIMIT,
               isPremium: sub.data.isPremium ?? false,
+              freeTrialUsed: sub.data.freeTrialUsed ?? 0,
+              freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
             });
             alert("Payment successful! Your minutes have been added.");
           } catch (e) {
@@ -134,15 +144,18 @@ export default function Home() {
 
   const handleSessionComplete = async () => {
     try {
-      const response = await api.get('/subscription');
+      const token = await getToken();
+      const response = await api.get('/subscription', token ? {
+        headers: { Authorization: `Bearer ${token}` },
+      } : undefined);
 
       if (response.status >= 200 && response.status < 300) {
         const data = response.data;
         setSubscriptionData({
           freeTrialUsed: data.freeTrialUsed || 0,
-          freeTrialLimit: data.freeTrialLimit || 5,
+          freeTrialLimit: data.freeTrialLimit || FREE_TRIAL_LIMIT,
           premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
-          premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? 0,
+          premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? FREE_TRIAL_LIMIT,
           isPremium: data.isPremium || false,
         });
       }
@@ -189,10 +202,10 @@ export default function Home() {
         <SessionsContent
           onNavigate={handleNavigate}
           onUpgrade={(calls?: number, planName?: string) => {
-            const planMap: Record<string, "basic" | "pro" | "elite"> = {
+            const planMap: Record<string, "basic" | "pro" | "premium"> = {
               "basic": "basic",
               "pro": "pro",
-              "elite": "elite"
+              "premium": "premium"
             };
             const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
             return handleUpgrade(mappedPlanId);

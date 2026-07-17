@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, CreditCard, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
@@ -28,6 +28,7 @@ export function ChatContent({
   isPremium = false,
   premiumCalls = 0,
   freeTrialUsed = 0,
+  freeTrialLimit = 5,
   onSessionComplete = () => { },
 }: {
   onNavigate?: (page: string) => void;
@@ -50,6 +51,10 @@ export function ChatContent({
   const [isWaitingForAssistant, setIsWaitingForAssistant] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
+  const [sessionNotice, setSessionNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
@@ -67,6 +72,7 @@ export function ChatContent({
   const vapiRef = useRef<Vapi | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const saveAttemptedRef = useRef(false);
+  const callStartRef = useRef<number | null>(null); // ✅ live call-start timestamp (avoids stale state in the once-registered listener)
 
   const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY!;
 
@@ -92,7 +98,8 @@ export function ChatContent({
     if (!vapi) return;
 
     const onCallStart = () => {
-      sessionIdRef.current = uuidv4();
+      sessionIdRef.current = sessionIdRef.current || uuidv4();
+      callStartRef.current = Date.now();
       setIsRecording(true);
       setIsInitializing(false);
       setIsWaitingForAssistant(true);
@@ -109,7 +116,6 @@ export function ChatContent({
       setIsRecording(false);
       setIsWaitingForAssistant(false);
       setIsSaving(true);
-      onSessionComplete();
 
       // ensure we only try to save once
       if (saveAttemptedRef.current) {
@@ -123,21 +129,37 @@ export function ChatContent({
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
 
+        // ✅ Compute duration from the ref, not sessionTime state (which is stale
+        // inside this once-registered listener). This drives the stored time AND
+        // the minutes deducted in /session-chat.
+        const durationSec = callStartRef.current
+          ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
+          : sessionTime;
+
+        console.log("[onCallEnd] saving session:", {
+          messagesCaptured: messagesRef.current.length,
+          notesLength: notes.length,
+          durationSec,
+          sessionId: sessionIdRef.current,
+        });
+
         const response = await api.post("/session-chat", {
           sessionId: sessionIdRef.current,
           notes,
-          durationSec: sessionTime,
+          durationSec,
         });
 
         if (response.status !== 200 && response.status !== 201) {
-          console.error("Save failed", response.data);
+          console.error("[onCallEnd] Save failed:", response.status, response.data);
         } else {
+          console.log("[onCallEnd] session saved OK");
           // Track Session Completed in PostHog
           posthog.capture("session_completed", {
             durationSec: sessionTime,
             plan: isPremium ? "premium" : "free",
             hadIntention: false,
           });
+          await onSessionComplete();
           onNavigate("history");
         }
 
@@ -187,6 +209,11 @@ export function ChatContent({
 
     const onError = (error: any) => {
       console.error("VAPI Error:", error);
+      console.error("FULL ERROR", error);
+      console.error("JSON", JSON.stringify(error, null, 2));
+      console.error("message", error?.message);
+      console.error("status", error?.status);
+      console.error("response", error?.response);
       // Clear all loading states on error
       setIsInitializing(false);
       setIsSaving(false);
@@ -235,8 +262,8 @@ export function ChatContent({
         console.error("Assistant configuration error. Please verify your assistant ID is correct and properly configured in the VAPI dashboard.");
         alert("Assistant configuration error. Please contact support to resolve this issue.");
       } else if (errorMessage.toLowerCase().includes("400")) {
-        console.error("Bad request error. This may be due to an invalid assistant configuration.");
-        alert("Configuration error. Please try again or contact support.");
+        console.error("Bad request error. This may be due to an invalid assistant configuration.", errorMessage);
+        alert("Configuration error (Vapi 400): " + errorMessage.slice(0, 400) + "\n\nOpen the browser console and share the 'FULL ERROR' / 'JSON' Vapi logs for the exact rejected field.");
       } else if (errorMessage.toLowerCase().includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
         console.error("Authentication error. Please verify your API key is correct and has proper permissions.");
         alert("Authentication error. Please verify your API key is correct.");
@@ -303,6 +330,26 @@ export function ChatContent({
   const startVoiceSession = async (consent: boolean = false) => {
     if (isRecording || isInitializing) return;
     setIsInitializing(true);
+    setSessionNotice(null);
+    setMessages([]);
+    messagesRef.current = [];
+    setSessionTime(0);
+    saveAttemptedRef.current = false;
+    callStartRef.current = null;
+
+    const showNoMinutesNotice = (data?: any) => {
+      const minutesRemaining = data?.minutesRemaining ?? premiumCalls;
+      const latestFreeTrialLimit = data?.freeTrialLimit ?? freeTrialLimit;
+      const latestFreeTrialUsed = data?.freeTrialUsed ??
+        Math.min(latestFreeTrialLimit, Math.max(0, latestFreeTrialLimit - minutesRemaining));
+
+      setSessionNotice({
+        title: isPremium ? "You're out of minutes" : "Your free minutes are used up",
+        message: isPremium
+          ? "Your current plan has 0 minutes remaining. Add more minutes when you are ready to continue."
+          : `You have used ${latestFreeTrialUsed} of ${latestFreeTrialLimit} free minute${latestFreeTrialLimit === 1 ? "" : "s"}. Add more minutes when you are ready to continue.`,
+      });
+    };
 
     try {
       // 1. Ask server for call config (checks minutes balance, injects memory)
@@ -316,16 +363,15 @@ export function ChatContent({
         // Track minutes exhausted in PostHog
         posthog.capture("minutes_exhausted", {
           plan: isPremium ? "premium" : "free",
-          minutesUsed: freeTrialUsed * 10,
+          minutesUsed: freeTrialUsed,
         });
 
-        alert("You have no minutes remaining. Please upgrade your plan.");
-        onNavigate("sessions");
+        showNoMinutesNotice(tokenRes.data);
         setIsInitializing(false);
         return;
       }
 
-      const { assistant, sessionId: serverSessionId } = tokenRes.data;
+      const { assistantId, assistantOverrides, sessionId: serverSessionId } = tokenRes.data;
 
       // Store the session ID from the server (has userId in metadata)
       sessionIdRef.current = serverSessionId;
@@ -334,7 +380,15 @@ export function ChatContent({
       const vapi = vapiRef.current;
       if (!vapi) throw new Error("Vapi not initialized");
 
-      vapi.start(assistant); // Pass the full assistant object, not just an ID
+      console.log(
+        "Starting Vapi assistant:",
+        assistantId,
+        "with overrides:",
+        JSON.stringify(assistantOverrides, null, 2)
+      );
+
+      // ✅ Start via the dashboard assistant (voice comes from there) + dynamic overrides
+      vapi.start(assistantId, assistantOverrides);
 
       // client/app/echo/[sessionId]/ChatContent.tsx — replace the catch block in startVoiceSession:
     } catch (err: any) {
@@ -344,8 +398,10 @@ export function ChatContent({
       if (!err.response) {
         console.error("[startVoiceSession] Network/CORS error:", err.message);
         alert(
-          "Couldn't reach the server. Please check your internet connection and try again. " +
-          "If this keeps happening, the app may be temporarily down."
+          "Couldn't reach the server. This usually means one of:\n" +
+          "• The server is still starting up (free hosting spins down when idle — wait ~30s and retry)\n" +
+          "• Your internet / local dev server is down\n\n" +
+          "Open the browser Network tab: if the request URL is http://localhost:4000, the local server isn't running."
         );
         return;
       }
@@ -355,10 +411,9 @@ export function ChatContent({
       if (status === 402) {
         posthog.capture("minutes_exhausted", {
           plan: isPremium ? "premium" : "free",
-          minutesUsed: freeTrialUsed * 10,
+          minutesUsed: err.response.data?.freeTrialUsed ?? freeTrialUsed,
         });
-        alert("You have no minutes remaining. Please upgrade your plan.");
-        onNavigate("sessions");
+        showNoMinutesNotice(err.response.data);
         return;
       }
 
@@ -410,14 +465,39 @@ export function ChatContent({
         <div className="flex flex-col items-center">
           {/* Chat Area - Centered on all screens */}
           <div className="w-full max-w-2xl">
+            {sessionNotice && (
+              <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-amber-100">{sessionNotice.title}</p>
+                    <p className="mt-1 text-sm text-amber-100/80">{sessionNotice.message}</p>
+                  </div>
+                  <button
+                    onClick={() => onNavigate("sessions")}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-gray-950 transition-colors hover:bg-amber-300"
+                  >
+                    <CreditCard size={16} />
+                    View plans
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 bg-gray-900/30">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-gray-300 flex items-center gap-2">
-                  <Clock className="text-violet-400" size={18} /> Session Time
-                </span>
-                <span className="text-2xl font-mono text-white">
-                  {formatTime(sessionTime)}
-                </span>
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-xl border border-violet-500/20 bg-gray-900/30 px-4 py-3">
+                  <span className="text-gray-300 flex items-center gap-2">
+                    <Clock className="text-violet-400" size={18} /> Session Time
+                  </span>
+                  <span className="text-2xl font-mono text-white">
+                    {formatTime(sessionTime)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-teal-500/20 bg-gray-900/30 px-4 py-3">
+                  <span className="text-gray-300">Minutes Remaining</span>
+                  <span className="text-2xl font-mono text-white">
+                    {premiumCalls}
+                  </span>
+                </div>
               </div>
 
 

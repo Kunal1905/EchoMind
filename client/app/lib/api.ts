@@ -12,8 +12,13 @@ declare global {
   }
 }
 
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const baseURL = configuredApiUrl.replace(/\/$/, "").endsWith("/api")
+  ? configuredApiUrl.replace(/\/$/, "")
+  : `${configuredApiUrl.replace(/\/$/, "")}/api`;
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api",
+  baseURL,
   headers: {
     "Content-Type": "application/json",
   },

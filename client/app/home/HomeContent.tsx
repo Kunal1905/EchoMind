@@ -76,15 +76,21 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          {/* Premium Status Banner */}
-          {isPremium && (
-            <motion.div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600/30 to-yellow-600/30 border border-amber-500/50 rounded-full mb-4">
+          {/* Minutes Status Banner */}
+          <motion.div className={`inline-flex items-center gap-2 px-4 py-2 border rounded-full mb-4 ${
+            isPremium
+              ? "bg-gradient-to-r from-amber-600/30 to-yellow-600/30 border-amber-500/50"
+              : "bg-gradient-to-r from-violet-600/30 to-teal-500/30 border-violet-500/50"
+          }`}>
+            {isPremium ? (
               <Crown className="text-yellow-400" size={16} />
-              <span className="text-yellow-200 text-sm">
-                Premium Active • {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} remaining
-              </span>
-            </motion.div>
-          )}
+            ) : (
+              <Timer className="text-teal-300" size={16} />
+            )}
+            <span className={`text-sm ${isPremium ? "text-yellow-200" : "text-teal-100"}`}>
+              {isPremium ? "Plan active" : "Free plan"} • {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} remaining
+            </span>
+          </motion.div>
 
           {/* Main Echo Orb */}
           <div className="flex justify-center mb-8">
@@ -113,7 +119,11 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
           {/* Trial Badge */}
           <motion.div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600/30 to-teal-500/30 border border-violet-500/50 rounded-full mb-8 glitch-hover">
             <Zap className="text-yellow-400" size={20} />
-            <span className="text-white">Free Trial: 5 minutes, no card required</span>
+            <span className="text-white">
+              {isPremium
+                ? `${premiumCalls} minute${premiumCalls !== 1 ? "s" : ""} available`
+                : `Free Trial: ${premiumCalls} of 5 minute${premiumCalls === 1 ? "" : "s"} remaining`}
+            </span>
           </motion.div>
 
           {/* CTA Button */}

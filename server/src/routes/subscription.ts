@@ -21,10 +21,17 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
       return res.status(404).json({ error: "User not found. Please sign out and back in." });
     }
     const u = rows[0];
+    const freeTrialLimit = PLANS.free.minutes;
+    const freeTrialUsed = u.plan === "free"
+      ? Math.min(freeTrialLimit, Math.max(0, freeTrialLimit - u.minutesRemaining))
+      : freeTrialLimit;
+
     res.json({
       plan:             u.plan as PlanKey,
       minutesRemaining: u.minutesRemaining,
-      minutesTotal:     u.minutesTotal,
+      minutesTotal:     u.plan === "free" ? freeTrialLimit : u.minutesTotal,
+      freeTrialUsed,
+      freeTrialLimit,
       isPremium:        u.plan !== "free",
     });
   } catch (error) {

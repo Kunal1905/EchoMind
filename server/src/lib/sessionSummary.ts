@@ -9,24 +9,49 @@ function buildFallbackSummary(notes: string) {
 
   const userMessages = cleanedNotes
     .filter((line) => line.toLowerCase().startsWith("user:"))
-    .map((line) => line.replace(/^user:\s*/i, ""));
+    .map((line) => line.replace(/^user:\s*/i, "").trim())
+    .filter(Boolean);
 
-  const samplePoints = userMessages.slice(0, 3).map((message) => {
-    const trimmed = message.trim();
-    return trimmed.length <= 120 ? trimmed : `${trimmed.slice(0, 117)}...`;
+  const meaningfulMessages = userMessages.filter((message) => {
+    const normalized = message.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").trim();
+    if (normalized.length < 3) return false;
+    return ![
+      "hi",
+      "hello",
+      "hey",
+      "how are you",
+      "how are you doing",
+      "thanks",
+      "thank you",
+    ].includes(normalized);
   });
 
-  const discussionPoints =
-    samplePoints.length > 0
-      ? samplePoints.map((point) => `- ${point}`).join("\n")
-      : "- The user completed a reflective voice session.\n- The conversation included emotional check-in and self-reflection.";
+  const combined = meaningfulMessages.join(" ").toLowerCase();
+  const mood =
+    /\b(good|great|fine|okay|ok|well|happy|better|calm)\b/.test(combined)
+      ? "positive or steady"
+      : /\b(sad|anxious|stress|stressed|angry|upset|tired|overwhelmed|bad)\b/.test(combined)
+        ? "difficult or unsettled"
+        : "reflective";
+
+  const discussionPoints = meaningfulMessages.length > 0
+    ? [
+        `- The session centered on a brief emotional check-in with a ${mood} tone.`,
+        `- The user shared ${meaningfulMessages.length === 1 ? "one main thought" : "a few thoughts"} about how they were feeling in the moment.`,
+        "- The conversation was short, so there were limited deeper themes to extract.",
+      ].join("\n")
+    : [
+        "- The session was a brief emotional check-in.",
+        "- There was not enough detailed transcript content to identify specific recurring themes.",
+      ].join("\n");
 
   return `## Key Discussion Points
 ${discussionPoints}
 
 ## Recommendations
-- Review this session and notice any recurring thoughts or emotional triggers.
-- Continue using short, regular check-ins to build awareness and consistency.`;
+- Continue using short check-ins, and add one or two details about what influenced the feeling.
+- Notice what helped the session feel ${mood}, then carry one small supportive action into the rest of the day.
+- If a future session feels important, spend a little longer exploring the situation, body sensations, and next step.`;
 }
 
 function buildPrompt(notes: string) {
@@ -52,6 +77,8 @@ Follow this exact format:
 
 Rules:
 - Do NOT include timestamps, quotes, or analysis meta-discussion.
+- Do NOT split a sentence or phrase into separate bullets.
+- Do NOT copy tiny transcript fragments as standalone bullets; synthesize the theme.
 - Do NOT mention that this is an AI summary.
 - Do NOT add sections other than the two listed above.
 - Keep the entire output concise but meaningful.
