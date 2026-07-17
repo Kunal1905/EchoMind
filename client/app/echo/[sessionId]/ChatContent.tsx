@@ -100,6 +100,7 @@ export function ChatContent({
     const onCallStart = () => {
       sessionIdRef.current = sessionIdRef.current || uuidv4();
       callStartRef.current = Date.now();
+      saveAttemptedRef.current = false;
       setIsRecording(true);
       setIsInitializing(false);
       setIsWaitingForAssistant(true);
@@ -112,7 +113,15 @@ export function ChatContent({
       });
     };
 
-    const onCallEnd = async () => {
+    const saveEndedSession = async ({
+      source,
+      softNotice,
+      delayBeforeNavigateMs = 0,
+    }: {
+      source: string;
+      softNotice?: { title: string; message: string };
+      delayBeforeNavigateMs?: number;
+    }) => {
       setIsRecording(false);
       setIsWaitingForAssistant(false);
       setIsSaving(true);
@@ -125,6 +134,10 @@ export function ChatContent({
       saveAttemptedRef.current = true;
 
       try {
+        if (softNotice) {
+          setSessionNotice(softNotice);
+        }
+
         const notes = messagesRef.current
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
@@ -136,7 +149,7 @@ export function ChatContent({
           ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
           : sessionTime;
 
-        console.log("[onCallEnd] saving session:", {
+        console.log(`[${source}] saving session:`, {
           messagesCaptured: messagesRef.current.length,
           notesLength: notes.length,
           durationSec,
@@ -150,16 +163,20 @@ export function ChatContent({
         });
 
         if (response.status !== 200 && response.status !== 201) {
-          console.error("[onCallEnd] Save failed:", response.status, response.data);
+          console.error(`[${source}] Save failed:`, response.status, response.data);
         } else {
-          console.log("[onCallEnd] session saved OK");
+          console.log(`[${source}] session saved OK`);
           // Track Session Completed in PostHog
           posthog.capture("session_completed", {
-            durationSec: sessionTime,
+            durationSec,
             plan: isPremium ? "premium" : "free",
             hadIntention: false,
+            endSource: source,
           });
           await onSessionComplete();
+          if (delayBeforeNavigateMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delayBeforeNavigateMs));
+          }
           onNavigate("history");
         }
 
@@ -168,8 +185,12 @@ export function ChatContent({
       } finally {
         setIsSaving(false);
         sessionIdRef.current = null;
-        saveAttemptedRef.current = false;
+        callStartRef.current = null;
       }
+    };
+
+    const onCallEnd = async () => {
+      await saveEndedSession({ source: "onCallEnd" });
     };
 
     const onMessage = (msg: any) => {
@@ -207,10 +228,17 @@ export function ChatContent({
       });
     };
 
-    const onError = (error: any) => {
+    const onError = async (error: any) => {
       console.error("VAPI Error:", error);
       console.error("FULL ERROR", error);
-      console.error("JSON", JSON.stringify(error, null, 2));
+      let serializedError = "";
+      try {
+        serializedError = JSON.stringify(error) || "";
+        console.error("JSON", JSON.stringify(error, null, 2));
+      } catch {
+        serializedError = String(error);
+        console.error("JSON", serializedError);
+      }
       console.error("message", error?.message);
       console.error("status", error?.status);
       console.error("response", error?.response);
@@ -255,6 +283,25 @@ export function ChatContent({
       // Ensure errorMessage is a string before calling toLowerCase
       if (typeof errorMessage !== 'string') {
         errorMessage = String(errorMessage);
+      }
+
+      const isMeetingEnded =
+        error?.type === "ejected" ||
+        serializedError.toLowerCase().includes('"type":"ejected"') ||
+        serializedError.toLowerCase().includes("meeting has ended") ||
+        errorMessage.toLowerCase().includes("meeting has ended");
+
+      if (isMeetingEnded) {
+        await saveEndedSession({
+          source: "vapi-ejected",
+          softNotice: {
+            title: "This session has ended",
+            message:
+              "I am really sorry this session ended here. I would love to talk more about what you are going through or what you are feeling when you have more minutes.",
+          },
+          delayBeforeNavigateMs: 1800,
+        });
+        return;
       }
 
       // Provide more user-friendly error messages based on the error content
