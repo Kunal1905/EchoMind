@@ -475,6 +475,14 @@ export function ChatContent({
         return;
       }
 
+      if (status === 500 || status === 503) {
+        const serverError = err.response.data?.error || "The server could not prepare the call.";
+        const serverCode = err.response.data?.code;
+        console.error("[startVoiceSession] Server error:", status, err.response.data);
+        alert(serverCode ? `${serverError}\n\nCode: ${serverCode}` : serverError);
+        return;
+      }
+
       // Genuine server error — log full details for debugging, show generic message to user
       console.error("[startVoiceSession] Server error:", status, err.response.data);
       alert("Something went wrong starting your session. Please try again in a moment.");

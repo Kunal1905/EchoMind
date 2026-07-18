@@ -8,7 +8,6 @@ import { HistoryContent } from "./history/HistoryContent"
 import { SessionsContent } from "./premium/SessionsContent";
 import api from "./lib/api";
 import { usePostHog } from "posthog-js/react";
-import Script from "next/script";
 import { useAuth } from "@clerk/nextjs";
 
 const FREE_TRIAL_LIMIT = 5;
@@ -20,6 +19,36 @@ const defaultSubscriptionData = {
   premiumCallsTotal: FREE_TRIAL_LIMIT,
   isPremium: false,
 };
+
+const loadRazorpayCheckout = () =>
+  new Promise<void>((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Razorpay checkout can only load in the browser."));
+      return;
+    }
+
+    if ((window as any).Razorpay) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Razorpay checkout failed to load.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Razorpay checkout failed to load."));
+    document.head.appendChild(script);
+  });
 
 export default function Home() {
   const posthog = usePostHog();
@@ -80,12 +109,9 @@ export default function Home() {
   };
 
   const handleUpgrade = async (planId: "basic" | "pro" | "premium") => {
-    if (typeof (window as any).Razorpay === "undefined") {
-      alert("Payment system is still loading. Please wait a moment and try again.");
-      return;
-    }
-
     try {
+      await loadRazorpayCheckout();
+
       const token = await getToken();
       const authConfig = token ? {
         headers: { Authorization: `Bearer ${token}` },
