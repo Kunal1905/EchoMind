@@ -29,9 +29,26 @@ export const moodEntriesTable = pgTable("mood_entries", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ✅ Idempotency guard for the Razorpay webhook. Razorpay delivers webhooks
+// at-least-once (retries on timeout/non-2xx), so "payment.captured" can
+// arrive more than once for the same payment. paymentId is Razorpay's own
+// payment.entity.id — globally unique per payment — as the primary key.
+// The webhook does INSERT ... ON CONFLICT DO NOTHING and only credits
+// minutes if its own insert wins the race, which makes double-crediting
+// impossible even under concurrent/duplicate delivery.
+export const processedPaymentsTable = pgTable("processed_payments", {
+  paymentId: varchar("payment_id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  plan: varchar("plan").notNull(),
+  minutesCredited: integer("minutes_credited").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 export type InsertSession = typeof sessionChatTable.$inferInsert;
 export type SelectSession = typeof sessionChatTable.$inferSelect;
 export type InsertMoodEntry = typeof moodEntriesTable.$inferInsert;
 export type SelectMoodEntry = typeof moodEntriesTable.$inferSelect;
+export type InsertProcessedPayment = typeof processedPaymentsTable.$inferInsert;
+export type SelectProcessedPayment = typeof processedPaymentsTable.$inferSelect;

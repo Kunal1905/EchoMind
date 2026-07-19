@@ -15,6 +15,13 @@
       "when": 1783167335078,
       "tag": "0001_productive_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784384913863,
+      "tag": "0002_clear_pride",
+      "breakpoints": true
     }
   ]
 }

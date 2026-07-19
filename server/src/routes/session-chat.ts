@@ -30,10 +30,19 @@ router.post("/",
       const notes = parsedBody.notes.trim() || "No transcript captured for this session.";
       const finalSessionId = sessionId || uuidv4();
       const existingSession = await db
-        .select({ durationSec: sessionChatTable.durationSec })
+        .select({ durationSec: sessionChatTable.durationSec, createdBy: sessionChatTable.createdBy })
         .from(sessionChatTable)
         .where(eq(sessionChatTable.sessionId, finalSessionId))
         .limit(1);
+
+      // ✅ Ownership check — a session that already belongs to someone else
+      // can't be overwritten just because the caller knows/guesses its ID.
+      // (createdBy is null right after the Vapi webhook creates the row
+      // before this endpoint ever runs, so null is treated as "unclaimed".)
+      if (existingSession[0] && existingSession[0].createdBy && existingSession[0].createdBy !== req.authUserId) {
+        return res.status(403).json({ error: "This session belongs to a different account" });
+      }
+
       const previousDurationSec = existingSession[0]?.durationSec ?? 0;
       const finalDurationSec = Math.max(previousDurationSec, durationSec);
 

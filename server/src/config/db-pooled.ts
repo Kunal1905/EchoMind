@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 pool.on("error", (err: Error) => console.error("[db] pool error:", err));
 
-export const db = drizzle({
+export const dbPooled = drizzle({
   client: pool,
   logger: process.env.NODE_ENV === "development",
 });

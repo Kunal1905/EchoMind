@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { db } from "../../config/db";
-import { usersTable } from "../../config/schema";
+import { usersTable, processedPaymentsTable } from "../../config/schema";
 import { eq, sql } from "drizzle-orm";
 import { PLANS, type PlanKey } from "../../config/plans";
 import { getRedis } from "../../lib/redis";
@@ -45,13 +45,34 @@ router.post("/", async (req, res) => {
     const notes = body.payload?.payment?.entity?.notes || {};
     const userId = notes.userId as string | undefined;
     const plan = notes.plan as PlanKey | undefined;
+    const paymentId = body.payload?.payment?.entity?.id as string | undefined;
 
-    if (!userId || !plan || !PLANS[plan]) {
-      console.warn("[razorpay-webhook] Missing userId or invalid plan in notes:", notes);
+    if (!userId || !plan || !PLANS[plan] || !paymentId) {
+      console.warn("[razorpay-webhook] Missing userId/plan/paymentId in payload:", { notes, paymentId });
       return res.status(200).json({ received: true }); // 200 so Razorpay doesn't retry
     }
 
     const planData = PLANS[plan];
+
+    // ✅ Idempotency gate — atomic at the DB level. If this payment ID was
+    // already recorded (e.g. Razorpay retried the webhook), the insert is a
+    // no-op and .returning() comes back empty, so we skip crediting again.
+    // This is race-safe even if two deliveries for the same payment arrive
+    // at the same instant, unlike a "check then insert" pattern would be.
+    const claimed = await db.insert(processedPaymentsTable)
+      .values({
+        paymentId,
+        userId,
+        plan,
+        minutesCredited: planData.minutes,
+      })
+      .onConflictDoNothing({ target: processedPaymentsTable.paymentId })
+      .returning({ paymentId: processedPaymentsTable.paymentId });
+
+    if (claimed.length === 0) {
+      console.log(`[razorpay-webhook] Payment ${paymentId} already processed — skipping duplicate credit`);
+      return res.status(200).json({ received: true, alreadyProcessed: true });
+    }
 
     await db.update(usersTable)
       .set({
