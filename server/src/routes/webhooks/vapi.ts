@@ -13,22 +13,30 @@ router.post("/", async (req, res) => {
   const signature = req.headers["x-vapi-signature"] as string | undefined;
   const secret = process.env.VAPI_WEBHOOK_SECRET;
 
-  // ✅ Verify Vapi HMAC signature
-  if (secret) {
-    if (!signature) {
-      console.warn("[vapi-webhook] Rejected: missing x-vapi-signature header");
-      return res.status(401).json({ error: "Missing signature" });
-    }
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody)
-      .digest("hex");
-    if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
-      console.warn("[vapi-webhook] Rejected: signature mismatch — VAPI_WEBHOOK_SECRET must match the secret in your Vapi dashboard");
-      return res.status(401).json({ error: "Invalid signature" });
-    }
-  } else {
-    console.warn("[vapi-webhook] VAPI_WEBHOOK_SECRET not set — signature verification SKIPPED (insecure; set it in env)");
+  // ✅ Fail CLOSED, not open — an unset secret used to mean "skip
+  // verification and process the request anyway," which let anyone who
+  // found this URL forge an end-of-call-report and drain any user's
+  // minutes. Now a missing secret means the endpoint refuses everything.
+  if (!secret) {
+    console.error("[vapi-webhook] VAPI_WEBHOOK_SECRET not set — rejecting all requests until it's configured");
+    return res.status(503).json({ error: "Webhook not configured" });
+  }
+  if (!signature) {
+    console.warn("[vapi-webhook] Rejected: missing x-vapi-signature header");
+    return res.status(401).json({ error: "Missing signature" });
+  }
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  const expectedBuf = Buffer.from(expected);
+  const signatureBuf = Buffer.from(signature);
+  if (
+    expectedBuf.length !== signatureBuf.length ||
+    !crypto.timingSafeEqual(expectedBuf, signatureBuf)
+  ) {
+    console.warn("[vapi-webhook] Rejected: signature mismatch — VAPI_WEBHOOK_SECRET must match the secret in your Vapi dashboard");
+    return res.status(401).json({ error: "Invalid signature" });
   }
 
   let body: any;

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { z } from "zod";
 import { db } from "../config/db";
 import { sessionChatTable, moodEntriesTable } from "../config/schema";
@@ -10,9 +11,20 @@ import { getRedis } from "../lib/redis";
 const router = Router();
 
 router.post("/", async (req, res) => {
-  // ✅ Verify only your own server can call this
+  // ✅ Fail CLOSED — an unset QUEUE_SECRET used to mean "let anyone call
+  // this," which lets any caller trigger paid Gemini summary calls and
+  // write mood entries under an arbitrary userId. Now it's required.
   const secret = process.env.QUEUE_SECRET;
-  if (secret && req.headers["x-queue-secret"] !== secret) {
+  if (!secret) {
+    console.error("[queue/summarize] QUEUE_SECRET not set — rejecting all requests until it's configured");
+    return res.status(503).json({ error: "Queue endpoint not configured" });
+  }
+  const provided = req.headers["x-queue-secret"];
+  if (
+    typeof provided !== "string" ||
+    provided.length !== secret.length ||
+    !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(secret))
+  ) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

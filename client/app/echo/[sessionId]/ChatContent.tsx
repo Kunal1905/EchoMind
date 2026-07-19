@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import api from "@/app/lib/api";
 import { usePostHog } from "posthog-js/react";
 import { PrivacyConsentModal } from "../../components/PrivacyConsentModal";
+import { MoodCheckModal } from "../../components/MoodCheckModal";
 
 
 interface Message {
@@ -58,6 +59,25 @@ export function ChatContent({
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+
+  // ✅ Post-session mood check-in — shown after a call ends, before
+  // navigating to history. Promise-based so saveEndedSession can `await`
+  // the user's response (or skip) before moving on.
+  const [moodModalSessionId, setMoodModalSessionId] = useState<string | null>(null);
+  const moodResolveRef = useRef<(() => void) | null>(null);
+
+  const promptMoodCheck = (sessionId: string): Promise<void> => {
+    return new Promise((resolve) => {
+      moodResolveRef.current = resolve;
+      setMoodModalSessionId(sessionId);
+    });
+  };
+
+  const closeMoodModal = () => {
+    setMoodModalSessionId(null);
+    moodResolveRef.current?.();
+    moodResolveRef.current = null;
+  };
 
   //select language
   const [language, setLanguage] = useState<"en" | "hi" | "mr" | "ta">("en");
@@ -138,6 +158,10 @@ export function ChatContent({
           setSessionNotice(softNotice);
         }
 
+        // Captured now — sessionIdRef.current gets cleared in `finally`
+        // below, but we still need it after that point for the mood prompt.
+        const completedSessionId = sessionIdRef.current;
+
         const notes = messagesRef.current
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
@@ -174,6 +198,9 @@ export function ChatContent({
             endSource: source,
           });
           await onSessionComplete();
+          if (completedSessionId) {
+            await promptMoodCheck(completedSessionId);
+          }
           if (delayBeforeNavigateMs > 0) {
             await new Promise((resolve) => setTimeout(resolve, delayBeforeNavigateMs));
           }
@@ -679,6 +706,13 @@ export function ChatContent({
               setConsentGranted(granted);
               startVoiceSession(granted);
             }}
+            {...moodModalSessionId && (
+            <MoodCheckModal
+              isOpen={!!moodModalSessionId}
+              sessionId={moodModalSessionId}
+              onDone={closeMoodModal}
+            />
+          )}
           />
         </div>
       </div>

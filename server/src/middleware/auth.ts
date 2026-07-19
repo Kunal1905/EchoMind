@@ -2,6 +2,7 @@ import { clerkClient, getAuth } from "@clerk/express";
 import type { NextFunction, Request, Response } from "express";
 import { db } from "../config/db";
 import { usersTable } from "../config/schema";
+import { getRedis } from "../lib/redis";
 
 export type AuthedRequest = Request & {
   authUserId?: string;
@@ -53,8 +54,26 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
   }
 
   req.authUserId = auth.userId;
+  const cacheKey = `user:${auth.userId}:seen`;
 
   try {
+    const redis = getRedis();
+
+    // ✅ Skip the DB write entirely once we've upserted this user recently.
+    // Turns "one DB write per request" into "one DB write per hour per
+    // active user." A Redis error here is treated as a cache miss (falls
+    // through to the normal DB path), never as a request failure.
+    if (redis) {
+      try {
+        const seen = await redis.get(cacheKey);
+        if (seen) {
+          return next();
+        }
+      } catch (redisError) {
+        console.warn("[auth] Redis cache check failed, falling back to DB write:", redisError);
+      }
+    }
+
     const claims = ((auth as typeof auth & {
       sessionClaims?: Record<string, unknown>;
     }).sessionClaims) || {};
@@ -70,6 +89,14 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
         target: usersTable.id,
         set: { name, email },
       });
+
+    if (redis) {
+      // Fire-and-forget — don't make the request wait on caching its own
+      // result. Worst case on failure: one extra DB write next request.
+      redis.set(cacheKey, "1", { ex: 3600 }).catch((err: unknown) =>
+        console.warn("[auth] Failed to cache user-seen flag:", err)
+      );
+    }
 
     next();
   } catch (error) {
