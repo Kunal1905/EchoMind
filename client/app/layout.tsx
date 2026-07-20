@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "EchoMind",
-  description: "AI-powered mental wellness companion",
+  title: "Echo Mind – AI-Powered Mental Wellness & Reflection App",
+  description: "Echo Mind is your AI-powered mental wellness companion. Reflect, track your mood, and build healthier thought patterns — start free today.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
