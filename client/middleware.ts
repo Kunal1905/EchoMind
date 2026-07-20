@@ -20,15 +20,13 @@ const isProtectedRoute = createRouteMatcher([
   '/history(.*)',
 ])
 
-// Base CSP directives without unsafe-inline - nonce will be added per-request
+// Base CSP directives - script-src and style-src are added dynamically with nonce
 const CSP_BASE_DIRECTIVES = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-eval' https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://app.posthog.com https://us.i.posthog.com",
-  "style-src 'self'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://echomind-1-de05.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://*.clerk.accounts.dev https://*.clerk.com https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com",
@@ -86,7 +84,8 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpg|jpeg|png|gif|svg|ico|json|txt)).*)',
-    '/(api|trpc)(.*)',
+    // Match all request paths except static files (JS/CSS under _next/static, images, icons, etc.)
+    // This guarantees non-existent asset requests (like /404javascript.js) trigger middleware and receive CSP headers.
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
