@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
-import HomeContent from "./home/HomeContent";
-import { ChatContent } from "./echo/[sessionId]/ChatContent";
-import { HistoryContent } from "./history/HistoryContent"
-import { SessionsContent } from "./premium/SessionsContent";
+import dynamic from "next/dynamic";
 import api from "./lib/api";
+
+const HomeContent = dynamic(() => import("./home/HomeContent"), { ssr: false });
+const ChatContent = dynamic(() => import("./echo/[sessionId]/ChatContent").then(mod => mod.ChatContent), { ssr: false });
+const HistoryContent = dynamic(() => import("./history/HistoryContent").then(mod => mod.HistoryContent), { ssr: false });
+const SessionsContent = dynamic(() => import("./premium/SessionsContent").then(mod => mod.SessionsContent), { ssr: false });
 import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@clerk/nextjs";
 
@@ -198,47 +200,49 @@ export default function Home() {
     <div className="min-h-screen">
       <Nav currentPage={currentPage} onNavigate={handleNavigate} />
 
-      {currentPage === "home" && (
-        <HomeContent
-          onNavigate={handleNavigate}
-          isPremium={subscriptionData.isPremium}
-          premiumCalls={subscriptionData.premiumCallsRemaining}
-        />
-      )}
+      <main>
+        {currentPage === "home" && (
+          <HomeContent
+            onNavigate={handleNavigate}
+            isPremium={subscriptionData.isPremium}
+            premiumCalls={subscriptionData.premiumCallsRemaining}
+          />
+        )}
 
-      {currentPage === "chat" && (
-        <ChatContent
-          onNavigate={handleNavigate}
-          isPremium={subscriptionData.isPremium}
-          premiumCalls={subscriptionData.premiumCallsRemaining}
-          freeTrialUsed={subscriptionData.freeTrialUsed}
-          freeTrialLimit={subscriptionData.freeTrialLimit}
-          onSessionComplete={handleSessionComplete}
-        />
-      )}
+        {currentPage === "chat" && (
+          <ChatContent
+            onNavigate={handleNavigate}
+            isPremium={subscriptionData.isPremium}
+            premiumCalls={subscriptionData.premiumCallsRemaining}
+            freeTrialUsed={subscriptionData.freeTrialUsed}
+            freeTrialLimit={subscriptionData.freeTrialLimit}
+            onSessionComplete={handleSessionComplete}
+          />
+        )}
 
-      {currentPage === "history" && (
-        <HistoryContent
-          onNavigate={handleNavigate}
-          isPremium={subscriptionData.isPremium}
-        />
-      )}
+        {currentPage === "history" && (
+          <HistoryContent
+            onNavigate={handleNavigate}
+            isPremium={subscriptionData.isPremium}
+          />
+        )}
 
-      {currentPage === "sessions" && (
-        <SessionsContent
-          onNavigate={handleNavigate}
-          onUpgrade={(calls?: number, planName?: string) => {
-            const planMap: Record<string, "basic" | "pro" | "premium"> = {
-              "basic": "basic",
-              "pro": "pro",
-              "premium": "premium"
-            };
-            const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
-            return handleUpgrade(mappedPlanId);
-          }}
-          isPremium={subscriptionData.isPremium}
-        />
-      )}
+        {currentPage === "sessions" && (
+          <SessionsContent
+            onNavigate={handleNavigate}
+            onUpgrade={(calls?: number, planName?: string) => {
+              const planMap: Record<string, "basic" | "pro" | "premium"> = {
+                "basic": "basic",
+                "pro": "pro",
+                "premium": "premium"
+              };
+              const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
+              return handleUpgrade(mappedPlanId);
+            }}
+            isPremium={subscriptionData.isPremium}
+          />
+        )}
+      </main>
     </div>
   );
 }
