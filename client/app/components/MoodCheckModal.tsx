@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import api from "@/app/lib/api";
+import { EASES, DURATIONS, usePrefersReducedMotion } from "../lib/motion";
 
 const MOOD_OPTIONS: { label: string; emoji: string; score: number }[] = [
   { label: "Struggling", emoji: "😔", score: 2 },
@@ -18,6 +19,7 @@ interface MoodCheckModalProps {
 
 export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prefersReduced = usePrefersReducedMotion();
 
   const submitMood = async (score: number) => {
     if (isSubmitting) return;
@@ -39,19 +41,27 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 animate-duration-fast"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{
+              duration: prefersReduced ? DURATIONS.instant : DURATIONS.base,
+              ease: EASES.smooth
+            }}
             onClick={onDone}
           />
 
           {/* Modal */}
           <motion.div
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-br from-gray-900 to-violet-950/50 border border-violet-500/30 rounded-2xl p-6 z-50 shadow-2xl text-white"
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
+            exit={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
+            transition={{
+              duration: prefersReduced ? DURATIONS.instant : DURATIONS.slow,
+              ease: EASES.smooth
+            }}
             role="dialog"
             aria-labelledby="mood-check-title"
             aria-describedby="mood-check-description"
@@ -73,9 +83,10 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
                   onClick={() => submitMood(opt.score)}
                   disabled={isSubmitting}
                   aria-label={opt.label}
-                  className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl bg-violet-950/30 border border-violet-500/10 hover:border-violet-500/40 transition-colors disabled:opacity-50"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl bg-violet-950/30 border border-violet-500/10 hover:border-violet-500/40 transition-colors disabled:opacity-50 cursor-pointer"
+                  whileHover={prefersReduced ? {} : { scale: 1.05 }}
+                  whileTap={prefersReduced ? {} : { scale: 0.95 }}
+                  transition={{ ease: EASES.smooth, duration: DURATIONS.fast }}
                 >
                   <span className="text-2xl" aria-hidden="true">{opt.emoji}</span>
                   <span className="text-[11px] text-gray-400">{opt.label}</span>
@@ -86,7 +97,7 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
             <button
               onClick={onDone}
               disabled={isSubmitting}
-              className="w-full px-6 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors text-center disabled:opacity-50"
+              className="w-full px-6 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors text-center disabled:opacity-50 cursor-pointer"
             >
               Skip
             </button>

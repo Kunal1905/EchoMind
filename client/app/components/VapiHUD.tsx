@@ -1,36 +1,43 @@
 "use client";
 
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Phone } from 'lucide-react';
+import { Mic, Phone } from 'lucide-react';
 import { useState } from 'react';
+import { EASES, DURATIONS, usePrefersReducedMotion } from '../lib/motion';
 
 interface VapiHUDProps {
   isRecording: boolean;
   onToggleRecording: () => void;
-  onEndCall?: () => void; // Make this optional since we're combining functionality
+  onEndCall?: () => void;
   waveformData?: number[];
   isWaitingForAssistant?: boolean;
   isInitializing?: boolean;
-  isSaving?: boolean; // Add saving state
+  isSaving?: boolean;
 }
 
 export function VapiHUD({ 
   isRecording, 
   onToggleRecording, 
-  onEndCall, // This is now optional
+  onEndCall, 
   waveformData = [0.3, 0.6, 0.4, 0.8, 0.5, 0.7, 0.3, 0.9, 0.6, 0.4],
   isWaitingForAssistant = false,
   isInitializing = false,
-  isSaving = false // Add saving state
+  isSaving = false
 }: VapiHUDProps) {
   const [showWaveform, setShowWaveform] = useState(true);
+  const prefersReduced = usePrefersReducedMotion();
+
+  const hudTransition = prefersReduced 
+    ? { duration: 0 } 
+    : { ease: EASES.smooth, duration: DURATIONS.slow };
 
   return (
     <motion.div
-      className="relative z-10" // Changed from fixed positioning to relative
-      initial={{ y: 100, opacity: 0 }}
+      className="relative z-10"
+      initial={prefersReduced ? { opacity: 0 } : { y: 60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
+      exit={prefersReduced ? { opacity: 0 } : { y: 60, opacity: 0 }}
+      transition={hudTransition}
     >
       <div className="backdrop-blur-xl bg-[--bg-darker]/90 border border-violet-500/30 rounded-3xl px-8 py-6 shadow-2xl md:shadow-none">
         <div className="flex flex-col items-center gap-4">
@@ -39,18 +46,21 @@ export function VapiHUD({
             {showWaveform && isRecording && (
               <motion.div
                 className="flex items-center gap-1 h-16"
-                initial={{ opacity: 0, height: 0 }}
+                initial={prefersReduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 64 }}
-                exit={{ opacity: 0, height: 0 }}
+                exit={prefersReduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                transition={hudTransition}
               >
                 {waveformData.map((height, index) => (
                   <motion.div
                     key={index}
                     className="w-1.5 bg-gradient-to-t from-violet-600 to-teal-400 rounded-full"
                     animate={{
-                      height: isRecording ? `${height * 100}%` : '20%'
+                      height: isRecording 
+                        ? (prefersReduced ? '50%' : `${height * 100}%`) 
+                        : '20%'
                     }}
-                    transition={{
+                    transition={prefersReduced ? { duration: 0 } : {
                       duration: 0.3,
                       repeat: Infinity,
                       repeatType: 'reverse',
@@ -68,13 +78,14 @@ export function VapiHUD({
             <motion.button
               onClick={onToggleRecording}
               disabled={isWaitingForAssistant || isInitializing || isSaving}
-              className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all ${
+              className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                 isRecording 
                   ? 'bg-gradient-to-br from-red-500 to-crimson-600' 
                   : 'bg-gradient-to-br from-violet-600 to-purple-700'
               } ${(isWaitingForAssistant || isInitializing || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              whileHover={{ scale: (isWaitingForAssistant || isInitializing || isSaving) ? 1 : 1.1 }}
-              whileTap={{ scale: (isWaitingForAssistant || isInitializing || isSaving) ? 1 : 0.95 }}
+              whileHover={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 1.1 }}
+              whileTap={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 0.95 }}
+              transition={{ ease: EASES.smooth, duration: DURATIONS.base }}
               aria-label={isRecording ? 'End call' : 'Start call'}
             >
               {isInitializing || isSaving ? (
@@ -86,8 +97,8 @@ export function VapiHUD({
                 <Mic className="text-white" size={28} />
               )}
               
-              {/* Pulse effect when recording */}
-              {isRecording && !isWaitingForAssistant && !isInitializing && !isSaving && (
+              {/* Pulse effect when recording - entirely hidden for reduced motion */}
+              {isRecording && !isWaitingForAssistant && !isInitializing && !isSaving && !prefersReduced && (
                 <>
                   <motion.div
                     className="absolute inset-0 rounded-full border-2 border-red-400"
@@ -123,8 +134,8 @@ export function VapiHUD({
           {(isRecording || isInitializing || isSaving) && (
             <motion.div
               className="flex items-center gap-2 text-sm text-red-400"
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              animate={prefersReduced ? {} : { opacity: [1, 0.5, 1] }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
             >
               <div className="w-2 h-2 rounded-full bg-red-500" />
               <span>

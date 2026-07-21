@@ -1,0 +1,144 @@
+@layer tokens {
+  :root {
+    /* Neural Core Palette */
+    --neural-violet: #8b5cf6;
+    --neural-violet-light: #a78bfa;
+    --neural-violet-dark: #7c3aed;
+    --neural-teal: #06b6d4;
+    --neural-teal-light: #22d3ee;
+    --neural-teal-dark: #0891b2;
+    --neural-amber: #f59e0b;
+    --neural-amber-light: #fbbf24;
+    --neural-amber-dark: #d97706;
+    --neural-emerald: #10b981;
+    --neural-emerald-light: #34d399;
+    --neural-emerald-dark: #059669;
+    --neural-rose: #f43f5e;
+    --neural-rose-light: #fb7185;
+    --neural-rose-dark: #e11d48;
+
+    /* Sentiment Variants */
+    --sentiment-neutral-from: var(--neural-violet);
+    --sentiment-neutral-via: var(--neural-teal);
+    --sentiment-neutral-to: var(--neural-violet-dark);
+
+    --sentiment-positive-from: var(--neural-emerald);
+    --sentiment-positive-via: var(--neural-teal);
+    --sentiment-positive-to: var(--neural-emerald-dark);
+
+    --sentiment-negative-from: var(--neural-rose);
+    --sentiment-negative-via: var(--neural-amber);
+    --sentiment-negative-to: var(--neural-rose-dark);
+
+    /* Glass Surfaces */
+    --glass-bg: rgba(15, 15, 25, 0.7);
+    --glass-bg-strong: rgba(10, 10, 20, 0.85);
+    --glass-border: rgba(139, 92, 246, 0.2);
+    --glass-border-strong: rgba(139, 92, 246, 0.4);
+    --glass-highlight: rgba(255, 255, 255, 0.05);
+    --glass-highlight-strong: rgba(255, 255, 255, 0.1);
+
+    /* Depth Layers */
+    --depth-1: rgba(10, 10, 15, 0.9);
+    --depth-2: rgba(15, 15, 25, 0.95);
+    --depth-3: rgba(20, 20, 35, 0.98);
+
+    /* Background */
+    --bg-deep: #050508;
+    --bg-dark: #0a0a0f;
+    --bg-card: #0f0f1a;
+    --bg-elevated: #141423;
+
+    /* Text */
+    --text-primary: #fafafa;
+    --text-secondary: #d4d4d8;
+    --text-muted: #a1a1aa;
+    --text-subtle: #71717a;
+
+    /* Motion Tokens */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-circ-out: cubic-bezier(0.075, 0.82, 0.165, 1);
+
+    --dur-instant: 80ms;
+    --dur-fast: 150ms;
+    --dur-base: 250ms;
+    --dur-slow: 400ms;
+    --dur-cinematic: 600ms;
+    --dur-ambient: 3000ms;
+    --dur-breath: 4000ms;
+
+    /* Stagger */
+    --stagger-tight: 0.04s;
+    --stagger-base: 0.06s;
+    --stagger-relaxed: 0.08s;
+
+    /* Radii */
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 32px 96px rgba(0, 0, 0, 0.7);
+    --shadow-glow-violet: 0 0 32px rgba(139, 92, 246, 0.4);
+    --shadow-glow-teal: 0 0 32px rgba(6, 182, 212, 0.4);
+    --shadow-glow-amber: 0 0 32px rgba(245, 158, 11, 0.4);
+    --shadow-glow-rose: 0 0 32px rgba(244, 63, 94, 0.4);
+
+    /* Z-Indices */
+    --z-bg: 0;
+    --z-content: 10;
+    --z-sticky: 40;
+    --z-nav: 50;
+    --z-modal-backdrop: 60;
+    --z-modal: 70;
+    --z-toast: 80;
+    --z-tooltip: 90;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg-deep: #fafafa;
+      --bg-dark: #ffffff;
+      --bg-card: #f4f4f5;
+      --bg-elevated: #ffffff;
+      --text-primary: #18181b;
+      --text-secondary: #3f3f46;
+      --text-muted: #71717a;
+      --text-subtle: #a1a1aa;
+      --glass-bg: rgba(250, 250, 250, 0.7);
+      --glass-bg-strong: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(139, 92, 246, 0.15);
+      --depth-1: rgba(255, 255, 255, 0.9);
+      --depth-2: rgba(250, 250, 250, 0.95);
+      --depth-3: rgba(245, 245, 245, 0.98);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --dur-instant: 0ms;
+      --dur-fast: 0ms;
+      --dur-base: 0ms;
+      --dur-slow: 0ms;
+      --dur-cinematic: 0ms;
+      --dur-ambient: 0ms;
+      --dur-breath: 0ms;
+      --stagger-tight: 0ms;
+      --stagger-base: 0ms;
+      --stagger-relaxed: 0ms;
+    }
+  }
+}

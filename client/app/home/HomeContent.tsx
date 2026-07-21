@@ -3,10 +3,21 @@
 import { motion } from 'motion/react';
 import { EchoOrb } from '../components/EchoOrb';
 import { Sparkles, Clock, Zap, Shield, TrendingUp, Users, Crown, Timer } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DisclaimerModal } from '../components/DisclaimerModal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { EASES, DURATIONS, usePrefersReducedMotion } from '../lib/motion';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+const HeroThreeBg = dynamic(() => import('../components/HeroThreeBg'), { ssr: false });
 
 // Create a wrapper component that can be used both as a page and as a component
 interface HomeContentProps {
@@ -19,6 +30,67 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
   const router = useRouter();
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Scroll animations via GSAP
+  useGSAP(() => {
+    if (prefersReducedMotion) return;
+
+    const customEase = "cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+
+    // 1. Features Carousel Reveal
+    gsap.fromTo(
+      ".features-carousel",
+      { opacity: 0, y: 30 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: customEase,
+        scrollTrigger: {
+          trigger: ".features-carousel",
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+
+    // 2. Comparison Cards Reveal (Staggered)
+    gsap.fromTo(
+      [".free-card", ".premium-card"],
+      { opacity: 0, y: 40 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.7,
+        stagger: 0.15,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: ".comparison-grid",
+          start: "top 80%",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+
+    // 3. Footer Reveal
+    gsap.fromTo(
+      ".footer-section",
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.5,
+        ease: customEase,
+        scrollTrigger: {
+          trigger: ".footer-section",
+          start: "top 95%",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, { scope: containerRef, dependencies: [prefersReducedMotion] });
 
   // Handle navigation either through props (when used as component) or router (when used as page)
   const handleNavigation = (page: string) => {
@@ -68,14 +140,20 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
   }, []);
 
   return (
-    <div className="min-h-screen neural-bg pt-20 md:pt-24 pb-24 md:pb-12 px-4">
+    <div ref={containerRef} className="min-h-screen relative overflow-hidden neural-bg pt-20 md:pt-24 pb-24 md:pb-12 px-4">
+      {/* Ambient Three.js Background */}
+      <HeroThreeBg />
+
       {/* Hero Section */}
-      <div className="container mx-auto max-w-4xl">
+      <div className="container mx-auto max-w-4xl relative z-10">
         <motion.div
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ 
+            duration: prefersReducedMotion ? DURATIONS.fast : DURATIONS.cinematic,
+            ease: EASES.smooth
+          }}
         >
           {/* Minutes Status Banner */}
           <motion.div className={`inline-flex items-center gap-2 px-4 py-2 border rounded-full mb-4 ${
@@ -139,24 +217,22 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
         </motion.div>
 
         {/* Features Carousel */}
-        <motion.div
-          className="relative h-48 mb-12 overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="features-carousel relative h-48 mb-12 overflow-hidden">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <motion.div
                 key={index}
                 className="absolute inset-0 flex items-center justify-center"
-                initial={{ opacity: 0, x: 100 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 50 }}
                 animate={{
                   opacity: currentFeature === index ? 1 : 0,
-                  x: currentFeature === index ? 0 : 100
+                  x: currentFeature === index ? 0 : (prefersReducedMotion ? 0 : 50)
                 }}
-                transition={{ duration: 0.5 }}
+                transition={{ 
+                  duration: prefersReducedMotion ? DURATIONS.fast : DURATIONS.slow,
+                  ease: EASES.smooth
+                }}
               >
                 <div className={`text-center p-8 rounded-2xl bg-gradient-to-br ${feature.color} bg-opacity-10 border border-white/10 backdrop-blur-sm max-w-md`}>
                   <div className="flex justify-center mb-4">
@@ -187,16 +263,15 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Free vs Premium Comparison */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="comparison-grid grid md:grid-cols-2 gap-6 mb-12">
           {/* Free Tier */}
           <motion.div
-            className="p-6 rounded-2xl backdrop-blur-xl bg-[--bg-darker]/60 border border-violet-500/20 relative overflow-hidden"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
+            className="free-card p-6 rounded-2xl backdrop-blur-xl bg-[--bg-darker]/60 border border-violet-500/20 relative overflow-hidden"
+            whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+            transition={{ ease: EASES.smooth, duration: DURATIONS.base }}
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl" />
             <h2 className="text-2xl font-bold mb-4">Free Tier</h2>
@@ -218,11 +293,9 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
 
           {/* Premium Tier */}
           <motion.div
-            className="p-6 rounded-2xl backdrop-blur-xl bg-[--bg-darker]/60 border border-amber-500/30 relative overflow-hidden"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-            whileHover={{ scale: 1.02 }}
+            className="premium-card p-6 rounded-2xl backdrop-blur-xl bg-[--bg-darker]/60 border border-amber-500/30 relative overflow-hidden"
+            whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+            transition={{ ease: EASES.smooth, duration: DURATIONS.base }}
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl" />
             {isPremium ? (
@@ -262,12 +335,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
         </div>
 
         {/* Disclaimer Footer */}
-        <motion.div
-          className="text-center space-y-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
+        <div className="footer-section text-center space-y-4">
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6">
             <button
               onClick={() => setDisclaimerOpen(true)}
@@ -294,7 +362,7 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
               IP & Copyright
             </Link>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <DisclaimerModal

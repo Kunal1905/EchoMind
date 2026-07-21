@@ -1,0 +1,341 @@
+@layer motion {
+  @property --orb-scale {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 1;
+  }
+
+  @property --orb-hue {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 270;
+  }
+
+  @property --orb-saturation {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 70%;
+  }
+
+  @property --orb-lightness {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 55%;
+  }
+
+  @property --gradient-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 45deg;
+  }
+
+  @property --gradient-stop-1 {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: var(--neural-violet);
+  }
+
+  @property --gradient-stop-2 {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: var(--neural-teal);
+  }
+
+  @property --gradient-stop-3 {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: var(--neural-violet-dark);
+  }
+
+  @property --ring-progress {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  @property --blob-path {
+    syntax: '<path>';
+    inherits: false;
+    initial-value: 'M0,0';
+  }
+
+  @property --particle-opacity {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 1;
+  }
+
+  @property --blur-radius {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  @keyframes breathe-slow {
+    0%, 100% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.15); opacity: 0.6; }
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+
+  @keyframes pulse-ring-double {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.5); opacity: 0.2; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+
+  @keyframes orbit {
+    0% { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+    100% { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+  }
+
+  @keyframes orbit-reverse {
+    0% { transform: rotate(0deg) translateX(160px) rotate(0deg); }
+    100% { transform: rotate(-360deg) translateX(160px) rotate(360deg); }
+  }
+
+  @keyframes particle-drift {
+    0% { transform: translate3d(0, 0, 0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translate3d(var(--drift-x, 0), var(--drift-y, -200px), var(--drift-z, 0)); opacity: 0; }
+  }
+
+  @keyframes neural-pulse {
+    0%, 100% { stroke-dashoffset: 0; opacity: 0.3; }
+    50% { stroke-dashoffset: -40; opacity: 1; }
+  }
+
+  @keyframes aurora-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-15px) rotate(2deg); }
+    66% { transform: translateY(5px) rotate(-1deg); }
+  }
+
+  @keyframes magnetic-pull {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(var(--pull-x, 0), var(--pull-y, 0)); }
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(0); opacity: 0.5; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  @keyframes slide-up-fade {
+    0% { transform: translateY(30px); opacity: 0; filter: blur(8px); }
+    100% { transform: translateY(0); opacity: 1; filter: blur(0); }
+  }
+
+  @keyframes slide-down-fade {
+    0% { transform: translateY(-30px); opacity: 0; filter: blur(8px); }
+    100% { transform: translateY(0); opacity: 1; filter: blur(0); }
+  }
+
+  @keyframes scale-fade {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes stagger-in {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes typewriter {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+  }
+
+  @keyframes border-draw {
+    0% { stroke-dashoffset: var(--border-length, 100); }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: var(--shadow-glow-base, 0 0 0 transparent); }
+    50% { box-shadow: var(--shadow-glow-peak, 0 0 32px rgba(139, 92, 246, 0.6)); }
+  }
+
+  /* Animation Classes */
+  .animate-breathe {
+    animation: breathe var(--dur-breath) var(--ease-smooth) infinite;
+  }
+
+  .animate-breathe-slow {
+    animation: breathe-slow var(--dur-ambient) var(--ease-smooth) infinite;
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 1.5s var(--ease-smooth) infinite;
+  }
+
+  .animate-pulse-ring-double {
+    animation: pulse-ring-double 3s var(--ease-smooth) infinite;
+  }
+
+  .animate-orbit {
+    animation: orbit 20s linear infinite;
+  }
+
+  .animate-orbit-reverse {
+    animation: orbit-reverse 30s linear infinite;
+  }
+
+  .animate-particle-drift {
+    animation: particle-drift 15s var(--ease-smooth) infinite;
+  }
+
+  .animate-neural-pulse {
+    animation: neural-pulse 2s var(--ease-smooth) infinite;
+  }
+
+  .animate-aurora {
+    animation: aurora-flow 30s var(--ease-smooth) infinite;
+    background-size: 200% 200%;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s var(--ease-smooth) infinite;
+    background-size: 200% 100%;
+  }
+
+  .animate-float {
+    animation: float 3s var(--ease-smooth) infinite;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 6s var(--ease-smooth) infinite;
+  }
+
+  .animate-ripple {
+    animation: ripple 0.6s var(--ease-smooth) forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up-fade var(--dur-cinematic) var(--ease-expo-out) forwards;
+  }
+
+  .animate-slide-down {
+    animation: slide-down-fade var(--dur-cinematic) var(--ease-expo-out) forwards;
+  }
+
+  .animate-scale-fade {
+    animation: scale-fade var(--dur-base) var(--ease-spring) forwards;
+  }
+
+  .animate-stagger-in {
+    animation: stagger-in var(--dur-slow) var(--ease-expo-out) forwards;
+    opacity: 0;
+  }
+
+  .animate-typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typewriter 1s var(--ease-smooth) forwards;
+  }
+
+  .animate-blink {
+    animation: blink 1s step-end infinite;
+  }
+
+  .animate-shake {
+    animation: shake 0.5s var(--ease-sharp);
+  }
+
+  .animate-border-draw {
+    animation: border-draw var(--dur-slow) var(--ease-smooth) forwards;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s var(--ease-smooth) infinite;
+  }
+
+  /* Stagger delays */
+  .stagger-1 { animation-delay: calc(var(--stagger-tight) * 1); }
+  .stagger-2 { animation-delay: calc(var(--stagger-tight) * 2); }
+  .stagger-3 { animation-delay: calc(var(--stagger-tight) * 3); }
+  .stagger-4 { animation-delay: calc(var(--stagger-tight) * 4); }
+  .stagger-5 { animation-delay: calc(var(--stagger-tight) * 5); }
+  .stagger-6 { animation-delay: calc(var(--stagger-tight) * 6); }
+  .stagger-7 { animation-delay: calc(var(--stagger-tight) * 7); }
+  .stagger-8 { animation-delay: calc(var(--stagger-tight) * 8); }
+
+  .stagger-relaxed-1 { animation-delay: calc(var(--stagger-relaxed) * 1); }
+  .stagger-relaxed-2 { animation-delay: calc(var(--stagger-relaxed) * 2); }
+  .stagger-relaxed-3 { animation-delay: calc(var(--stagger-relaxed) * 3); }
+  .stagger-relaxed-4 { animation-delay: calc(var(--stagger-relaxed) * 4); }
+  .stagger-relaxed-5 { animation-delay: calc(var(--stagger-relaxed) * 5); }
+
+  /* Reduced motion overrides */
+  @media (prefers-reduced-motion: reduce) {
+    [class*="animate-"],
+    [class*="stagger-"] {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .animate-typewriter {
+      width: 100% !important;
+    }
+  }
+
+  /* Utility classes for Framer Motion / GSAP integration */
+  .motion-reduce {
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  }
+
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .will-change-opacity {
+    will-change: opacity;
+  }
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}

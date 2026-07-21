@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
 import dynamic from "next/dynamic";
 import api from "./lib/api";
+import { motion, AnimatePresence } from "motion/react";
+import { EASES, DURATIONS, usePrefersReducedMotion } from "./lib/motion";
 
 const HomeContent = dynamic(() => import("./home/HomeContent"), { ssr: false });
 const ChatContent = dynamic(() => import("./echo/[sessionId]/ChatContent").then(mod => mod.ChatContent), { ssr: false });
@@ -57,6 +59,7 @@ export default function Home() {
   const posthog = usePostHog();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
   const [loading, setLoading] = useState(true);
@@ -202,53 +205,63 @@ export default function Home() {
       <Nav currentPage={currentPage} onNavigate={handleNavigate} />
 
       <main>
-        {currentPage === "home" && (
-          <HomeContent
-            onNavigate={handleNavigate}
-            isPremium={subscriptionData.isPremium}
-            premiumCalls={subscriptionData.premiumCallsRemaining}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { ease: EASES.smooth, duration: DURATIONS.base }}
+          >
+            {currentPage === "home" && (
+              <HomeContent
+                onNavigate={handleNavigate}
+                isPremium={subscriptionData.isPremium}
+                premiumCalls={subscriptionData.premiumCallsRemaining}
+              />
+            )}
 
-        {currentPage === "chat" && (
-          <ChatContent
-            onNavigate={handleNavigate}
-            isPremium={subscriptionData.isPremium}
-            premiumCalls={subscriptionData.premiumCallsRemaining}
-            freeTrialUsed={subscriptionData.freeTrialUsed}
-            freeTrialLimit={subscriptionData.freeTrialLimit}
-            onSessionComplete={handleSessionComplete}
-          />
-        )}
+            {currentPage === "chat" && (
+              <ChatContent
+                onNavigate={handleNavigate}
+                isPremium={subscriptionData.isPremium}
+                premiumCalls={subscriptionData.premiumCallsRemaining}
+                freeTrialUsed={subscriptionData.freeTrialUsed}
+                freeTrialLimit={subscriptionData.freeTrialLimit}
+                onSessionComplete={handleSessionComplete}
+              />
+            )}
 
-        {currentPage === "history" && (
-          <HistoryContent
-            onNavigate={handleNavigate}
-            isPremium={subscriptionData.isPremium}
-          />
-        )}
+            {currentPage === "history" && (
+              <HistoryContent
+                onNavigate={handleNavigate}
+                isPremium={subscriptionData.isPremium}
+              />
+            )}
 
-        {currentPage === "sessions" && (
-          <SessionsContent
-            onNavigate={handleNavigate}
-            onUpgrade={(calls?: number, planName?: string) => {
-              const planMap: Record<string, "basic" | "pro" | "premium"> = {
-                "basic": "basic",
-                "pro": "pro",
-                "premium": "premium"
-              };
-              const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
-              return handleUpgrade(mappedPlanId);
-            }}
-            isPremium={subscriptionData.isPremium}
-          />
-        )}
+            {currentPage === "sessions" && (
+              <SessionsContent
+                onNavigate={handleNavigate}
+                onUpgrade={(calls?: number, planName?: string) => {
+                  const planMap: Record<string, "basic" | "pro" | "premium"> = {
+                    "basic": "basic",
+                    "pro": "pro",
+                    "premium": "premium"
+                  };
+                  const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
+                  return handleUpgrade(mappedPlanId);
+                }}
+                isPremium={subscriptionData.isPremium}
+              />
+            )}
 
-        {currentPage === "settings" && (
-          <SettingsContent
-            onNavigate={handleNavigate}
-          />
-        )}
+            {currentPage === "settings" && (
+              <SettingsContent
+                onNavigate={handleNavigate}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );
