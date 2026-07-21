@@ -8,6 +8,7 @@ import {
   Menu,
   X,
   UserIcon,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -26,6 +27,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
     { id: "chat", label: "Echo", icon: MessageCircle },
     { id: "history", label: "History", icon: History },
     { id: "sessions", label: "Premium", icon: CreditCard },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (

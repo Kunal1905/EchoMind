@@ -6,6 +6,7 @@ import { Sparkles, Clock, Zap, Shield, TrendingUp, Users, Crown, Timer } from 'l
 import { useState, useEffect } from 'react';
 import { DisclaimerModal } from '../components/DisclaimerModal';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 // Create a wrapper component that can be used both as a page and as a component
 interface HomeContentProps {
@@ -262,17 +263,37 @@ export default function HomeContent({ onNavigate, isPremium = false, premiumCall
 
         {/* Disclaimer Footer */}
         <motion.div
-          className="text-center"
+          className="text-center space-y-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          <button
-            onClick={() => setDisclaimerOpen(true)}
-            className="text-sm text-gray-400 hover:text-gray-300 underline"
-          >
-            Important: Mental Health Resources & Disclaimer
-          </button>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6">
+            <button
+              onClick={() => setDisclaimerOpen(true)}
+              className="text-xs text-gray-400 hover:text-gray-300 underline"
+            >
+              Mental Health Disclaimer
+            </button>
+            <Link
+              href="/privacy"
+              className="text-xs text-gray-400 hover:text-gray-300 underline"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-xs text-gray-400 hover:text-gray-300 underline"
+            >
+              Terms of Use
+            </Link>
+            <Link
+              href="/copyright"
+              className="text-xs text-gray-400 hover:text-gray-300 underline"
+            >
+              IP & Copyright
+            </Link>
+          </div>
         </motion.div>
       </div>
 

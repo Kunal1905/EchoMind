@@ -83,7 +83,7 @@ router.post("/",
       generateSessionSummaryWithFallback(notes)
         .then((summary) =>
           db.update(sessionChatTable)
-            .set({ summary })
+            .set({ summary, notes: null })
             .where(eq(sessionChatTable.sessionId, finalSessionId))
         )
         .catch((e) => console.error("[session-chat] summary generation failed:", e));

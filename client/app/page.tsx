@@ -9,6 +9,7 @@ const HomeContent = dynamic(() => import("./home/HomeContent"), { ssr: false });
 const ChatContent = dynamic(() => import("./echo/[sessionId]/ChatContent").then(mod => mod.ChatContent), { ssr: false });
 const HistoryContent = dynamic(() => import("./history/HistoryContent").then(mod => mod.HistoryContent), { ssr: false });
 const SessionsContent = dynamic(() => import("./premium/SessionsContent").then(mod => mod.SessionsContent), { ssr: false });
+const SettingsContent = dynamic(() => import("./settings/SettingsContent").then(mod => mod.SettingsContent), { ssr: false });
 import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@clerk/nextjs";
 
@@ -240,6 +241,12 @@ export default function Home() {
               return handleUpgrade(mappedPlanId);
             }}
             isPremium={subscriptionData.isPremium}
+          />
+        )}
+
+        {currentPage === "settings" && (
+          <SettingsContent
+            onNavigate={handleNavigate}
           />
         )}
       </main>

@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
     const summary = await generateSessionSummaryWithFallback(notes);
 
     await db.update(sessionChatTable)
-      .set({ summary })
+      .set({ summary, notes: null })
       .where(eq(sessionChatTable.sessionId, sessionId));
 
     if (moodScore) {
