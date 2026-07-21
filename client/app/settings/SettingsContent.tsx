@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useUser, useAuth } from "@clerk/nextjs";
 import api from "../lib/api";
 import { usePostHog } from "posthog-js/react";
+import ConstellationField from "../components/ConstellationField";
 
 interface AccountInfo {
   plan: string;
@@ -180,21 +181,22 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
   };
 
   if (!isLoaded) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading...</div>;
   }
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white px-4">
-        <div className="p-8 bg-white/[0.03] border border-white/10 rounded-2xl shadow-xl text-center max-w-md w-full backdrop-blur-xl">
-          <Lock className="mx-auto mb-4 text-violet-400" size={48} />
-          <h2 className="text-2xl font-bold text-white mb-3">🔒 Sign In Required</h2>
-          <p className="text-gray-400 mb-6 text-sm">
+      <div className="void-page flex min-h-screen items-center justify-center px-4">
+        <ConstellationField density="ambient" className="opacity-50" />
+        <div className="relative z-10 max-w-md text-center">
+          <Lock className="mx-auto mb-4 text-[--color-electric-iris]" size={48} />
+          <h2 className="void-subheading mb-3">Sign in required.</h2>
+          <p className="void-copy mb-6">
             Please sign in to manage your privacy consent options and view or erase your personalized session data.
           </p>
           <Link
             href="/sign-in"
-            className="inline-block px-8 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full text-white font-medium hover:from-violet-500 hover:to-teal-400 transition-all shadow-lg"
+            className="void-pill"
           >
             Sign In
           </Link>
@@ -204,14 +206,15 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pt-20 pb-20 px-4 text-white">
-      <div className="mx-auto max-w-4xl">
+    <main className="void-page pt-24 pb-24 text-white">
+      <ConstellationField density="ambient" className="fixed opacity-35" />
+      <div className="void-section max-w-5xl">
         {/* Back navigation */}
         <div className="mb-6">
           {onNavigate ? (
             <button
               onClick={() => onNavigate("home")}
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              className="void-ghost inline-flex items-center gap-2"
             >
               <ArrowLeft size={16} />
               Back to Dashboard
@@ -219,7 +222,7 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
           ) : (
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              className="void-ghost inline-flex items-center gap-2"
             >
               <ArrowLeft size={16} />
               Back to Dashboard
@@ -228,12 +231,17 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
         </div>
 
         {/* Title */}
-        <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-400 to-teal-300 bg-clip-text text-transparent flex items-center gap-3">
-            <Shield size={36} className="text-violet-400 shrink-0" />
-            Privacy & Data Settings
+        <header className="mb-16 grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-end">
+          <div>
+            <p className="void-kicker mb-5 flex items-center gap-2">
+              <Shield size={16} className="text-[--color-electric-iris] shrink-0" />
+              Privacy
+            </p>
+            <h1 className="void-display">
+              Your memory is yours.
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
+          </div>
+          <p className="void-copy">
             Manage your personal data choices, review metrics, and control how EchoMind processes your conversations under the DPDP Act 2023.
           </p>
         </header>
@@ -242,7 +250,7 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
         <AnimatePresence>
           {successMessage && (
             <motion.div
-              className="mb-6 p-4 rounded-xl border border-green-500/20 bg-green-500/5 text-sm text-green-200 flex items-center gap-3"
+              className="mb-8 border-t border-b border-green-500/30 py-4 text-sm text-green-200 flex items-center gap-3"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -255,15 +263,15 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
 
         {loading ? (
           <div className="flex justify-center items-center py-16">
-            <Loader2 className="animate-spin text-violet-400" size={40} />
+            <Loader2 className="animate-spin text-[--color-electric-iris]" size={40} />
           </div>
         ) : error ? (
-          <div className="p-6 bg-red-950/20 border border-red-500/30 rounded-xl text-center">
+          <div className="border-t border-red-500/30 py-8 text-center">
             <AlertTriangle className="mx-auto text-yellow-400 mb-2" size={32} />
             <p className="text-red-300 text-sm">{error}</p>
             <button
               onClick={fetchData}
-              className="mt-4 px-4 py-2 bg-violet-600 rounded-lg text-xs hover:bg-violet-500 transition-colors inline-flex items-center gap-1.5"
+              className="void-pill mt-4 inline-flex"
             >
               <RefreshCw size={12} /> Retry
             </button>
@@ -272,20 +280,20 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
           <div className="space-y-8">
             {/* 1. Account & Consent Status */}
             <motion.div
-              className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl shadow-xl backdrop-blur-xl"
+              className="border-t void-hairline pt-8"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h2 className="text-xl font-semibold text-violet-300 mb-4 flex items-center gap-2">
-                <UserCheck size={20} className="text-violet-400" />
+              <h2 className="void-subheading mb-6 flex items-center gap-2">
+                <UserCheck size={20} className="text-[--color-electric-iris]" />
                 Personalized AI Memory
               </h2>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="max-w-xl space-y-1.5">
-                  <p className="text-sm text-gray-200">
+                  <p className="void-copy text-white">
                     Allow EchoMind to reference your past session summaries to carry on conversations naturally.
                   </p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-sm text-[--color-ash-gray] leading-relaxed">
                     With your consent, summaries of previous wellness check-ins and mood trends are analyzed dynamically to give the companion context. If you withdraw consent, the companion will treat every call as a blank slate.
                   </p>
                 </div>
@@ -294,7 +302,7 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
                   onClick={handleToggleConsent}
                   disabled={savingConsent}
                   className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    data.account.memoryConsent ? "bg-teal-500" : "bg-gray-700"
+                    data.account.memoryConsent ? "bg-[--color-electric-iris]" : "bg-zinc-800"
                   }`}
                   aria-label="Toggle Memory Consent"
                 >
@@ -311,14 +319,14 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
               </div>
 
               {/* Mini Consent Badge */}
-              <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-4 text-xs">
-                <span className="text-gray-400 flex items-center gap-1.5">
+              <div className="mt-6 pt-5 border-t void-hairline flex flex-wrap gap-4 text-xs">
+                <span className="text-[--color-ash-gray] flex items-center gap-1.5">
                   Plan Tier: <strong className="text-white uppercase">{data.account.plan}</strong>
                 </span>
-                <span className="text-gray-400 flex items-center gap-1.5">
+                <span className="text-[--color-ash-gray] flex items-center gap-1.5">
                   Remaining Minutes: <strong className="text-white">{data.account.minutesRemaining} mins</strong>
                 </span>
-                <span className="text-gray-400 flex items-center gap-1.5">
+                <span className="text-[--color-ash-gray] flex items-center gap-1.5">
                   Consent Status:{" "}
                   <span className={`font-semibold flex items-center gap-0.5 ${data.account.memoryConsent ? "text-teal-400" : "text-gray-400"}`}>
                     {data.account.memoryConsent ? (
@@ -337,46 +345,46 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
 
             {/* 2. My Data Directory */}
             <motion.div
-              className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl shadow-xl backdrop-blur-xl"
+              className="border-t void-hairline pt-8"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <h2 className="text-xl font-semibold text-violet-300 mb-4 flex items-center gap-2">
-                <Database size={20} className="text-violet-400" />
+              <h2 className="void-subheading mb-5 flex items-center gap-2">
+                <Database size={20} className="text-[--color-electric-iris]" />
                 Data Storage Summary
               </h2>
-              <p className="text-sm text-gray-300 mb-6">
+              <p className="void-copy mb-8">
                 Below is a transparent report of the data files and summaries linked to your account.
               </p>
 
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01]">
-                  <div className="text-xs text-gray-400 font-medium">Session Summaries Stored</div>
-                  <div className="text-2xl font-bold text-white mt-1">
+                <div className="border-t void-hairline pt-4">
+                  <div className="void-kicker">Session Summaries Stored</div>
+                  <div className="text-5xl font-normal tracking-[-0.04em] text-white mt-2">
                     {data.sessions.filter(s => s.hasSummary).length}
                   </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">AI-generated descriptions</div>
+                  <div className="text-xs text-[--color-ash-gray] mt-2">AI-generated descriptions</div>
                 </div>
 
-                <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01]">
-                  <div className="text-xs text-gray-400 font-medium">Mood Check-ins Tracked</div>
-                  <div className="text-2xl font-bold text-white mt-1">{data.moodEntries}</div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">Submitted after calls</div>
+                <div className="border-t void-hairline pt-4">
+                  <div className="void-kicker">Mood Check-ins Tracked</div>
+                  <div className="text-5xl font-normal tracking-[-0.04em] text-white mt-2">{data.moodEntries}</div>
+                  <div className="text-xs text-[--color-ash-gray] mt-2">Submitted after calls</div>
                 </div>
               </div>
 
               {/* Data Category lists */}
-              <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5 text-sm">
+              <div className="grid md:grid-cols-2 gap-10 pt-6 border-t void-hairline text-sm">
                 <div>
-                  <h3 className="font-semibold text-teal-400 flex items-center gap-1.5 mb-3">
+                  <h3 className="void-kicker flex items-center gap-1.5 mb-3">
                     <CheckCircle2 size={16} /> What We Keep
                   </h3>
                   <ul className="space-y-2">
                     {data.dataStored.map((item, idx) => (
-                      <li key={idx} className="text-xs text-gray-300 flex items-start gap-2">
-                        <span className="text-teal-400 shrink-0 mt-0.5">•</span>
+                      <li key={idx} className="text-sm text-[--color-silver-mist] flex items-start gap-2">
+                        <span className="text-[--color-saffron-spark] shrink-0 mt-0.5">•</span>
                         <span>{item}</span>
                       </li>
                     ))}
@@ -384,12 +392,12 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-400 flex items-center gap-1.5 mb-3">
+                  <h3 className="void-kicker flex items-center gap-1.5 mb-3 text-[--color-ash-gray]">
                     <EyeOff size={16} /> What We Do NOT Retain
                   </h3>
                   <ul className="space-y-2">
                     {data.dataNotStored.map((item, idx) => (
-                      <li key={idx} className="text-xs text-gray-400 flex items-start gap-2">
+                      <li key={idx} className="text-sm text-[--color-ash-gray] flex items-start gap-2">
                         <span className="text-red-400 shrink-0 mt-0.5">×</span>
                         <span>{item}</span>
                       </li>
@@ -401,21 +409,21 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
 
             {/* 3. Deletion Panel */}
             <motion.div
-              className="p-6 bg-red-950/5 border border-red-500/20 rounded-2xl shadow-xl backdrop-blur-xl"
+              className="border-t border-red-500/30 pt-8"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-xl">
-                  <h2 className="text-xl font-semibold text-red-400 flex items-center gap-2">
+                  <h2 className="void-subheading text-red-300 flex items-center gap-2">
                     <Trash2 size={20} className="text-red-400" />
                     Right to Erasure (DPDP Act)
                   </h2>
-                  <p className="text-sm text-gray-200">
+                  <p className="text-sm text-white">
                     Permanently delete all your session summaries and mood check-in entries.
                   </p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs text-[--color-ash-gray] leading-relaxed">
                     This action deletes all conversation summaries and mood ratings. Your minute balance and plan level will be preserved, but all past companion memory is wiped. <strong>This action cannot be undone.</strong>
                   </p>
                 </div>
@@ -450,7 +458,7 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
 
             {/* Modal Box */}
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-gradient-to-br from-gray-900 to-red-950/20 border border-red-500/30 rounded-2xl p-6 z-50 shadow-2xl text-white"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-black border border-red-500/30 rounded-2xl p-6 z-50 text-white"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}

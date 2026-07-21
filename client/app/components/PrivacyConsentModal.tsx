@@ -42,7 +42,7 @@ export function PrivacyConsentModal({ isOpen, onClose, onConsentGiven }: Privacy
 
           {/* Modal */}
           <motion.div
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-br from-gray-900 to-violet-950/50 border border-violet-500/30 rounded-2xl p-6 z-50 shadow-2xl text-white"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-black border border-white/15 rounded-2xl p-6 z-50 text-white"
             initial={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
@@ -56,13 +56,13 @@ export function PrivacyConsentModal({ isOpen, onClose, onConsentGiven }: Privacy
           >
             {/* Icon */}
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-teal-500/20 border border-violet-500/30 flex items-center justify-center">
-                <ShieldCheck className="text-teal-400" size={32} />
+              <div className="flex h-16 w-16 items-center justify-center">
+                <ShieldCheck className="text-[--color-electric-iris]" size={32} />
               </div>
             </div>
 
             {/* Title */}
-            <h3 id="consent-title" className="text-center text-xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent">
+            <h3 id="consent-title" className="void-subheading mb-4 text-center">
               Personalized AI Memory
             </h3>
 
@@ -72,8 +72,8 @@ export function PrivacyConsentModal({ isOpen, onClose, onConsentGiven }: Privacy
                 To provide deeper reflection and track emotional progress over time, EchoMind can securely analyze and remember context from your previous conversations.
               </p>
 
-              <div className="bg-violet-950/30 border border-violet-500/10 rounded-lg p-4 flex gap-3 items-start">
-                <Info className="text-violet-400 shrink-0 mt-0.5" size={18} />
+              <div className="border-t void-hairline pt-4 flex gap-3 items-start">
+                <Info className="text-[--color-electric-iris] shrink-0 mt-0.5" size={18} />
                 <p className="text-xs text-gray-400">
                   Your voice sessions are encrypted and confidential. You can change your preference or reset your session history at any time.
                 </p>
@@ -84,7 +84,7 @@ export function PrivacyConsentModal({ isOpen, onClose, onConsentGiven }: Privacy
             <div className="flex flex-col gap-3 mt-6">
               <motion.button
                 onClick={() => handleConsent(true)}
-                className="w-full px-6 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full hover:from-violet-500 hover:to-teal-400 transition-all font-semibold text-center cursor-pointer"
+                className="void-pill w-full cursor-pointer"
                 whileHover={prefersReduced ? {} : { scale: 1.02 }}
                 whileTap={prefersReduced ? {} : { scale: 0.98 }}
                 transition={{ ease: EASES.smooth, duration: DURATIONS.base }}

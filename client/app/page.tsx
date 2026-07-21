@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Nav } from "./components/Nav";
-import dynamic from "next/dynamic";
 import api from "./lib/api";
-import { motion, AnimatePresence } from "motion/react";
-import { EASES, DURATIONS, usePrefersReducedMotion } from "./lib/motion";
-
-const HomeContent = dynamic(() => import("./home/HomeContent"), { ssr: false });
-const ChatContent = dynamic(() => import("./echo/[sessionId]/ChatContent").then(mod => mod.ChatContent), { ssr: false });
-const HistoryContent = dynamic(() => import("./history/HistoryContent").then(mod => mod.HistoryContent), { ssr: false });
-const SessionsContent = dynamic(() => import("./premium/SessionsContent").then(mod => mod.SessionsContent), { ssr: false });
-const SettingsContent = dynamic(() => import("./settings/SettingsContent").then(mod => mod.SettingsContent), { ssr: false });
+import HomeContent from "./home/HomeContent";
+import { ChatContent } from "./echo/[sessionId]/ChatContent";
+import { HistoryContent } from "./history/HistoryContent";
+import { SessionsContent } from "./premium/SessionsContent";
+import { SettingsContent } from "./settings/SettingsContent";
 import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@clerk/nextjs";
 
@@ -59,7 +55,6 @@ export default function Home() {
   const posthog = usePostHog();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
-  const prefersReducedMotion = usePrefersReducedMotion();
 
   const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
   const [loading, setLoading] = useState(true);
@@ -110,8 +105,7 @@ export default function Home() {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
-    // Smooth scroll to top
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const handleUpgrade = async (planId: "basic" | "pro" | "premium") => {
@@ -197,22 +191,14 @@ export default function Home() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-900">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-black">
       <Nav currentPage={currentPage} onNavigate={handleNavigate} />
 
-      <main>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPage}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={prefersReducedMotion ? { duration: 0 } : { ease: EASES.smooth, duration: DURATIONS.base }}
-          >
+      <main className="min-h-screen bg-black">
             {currentPage === "home" && (
               <HomeContent
                 onNavigate={handleNavigate}
@@ -260,8 +246,6 @@ export default function Home() {
                 onNavigate={handleNavigate}
               />
             )}
-          </motion.div>
-        </AnimatePresence>
       </main>
     </div>
   );

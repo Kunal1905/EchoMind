@@ -39,7 +39,7 @@ export function VapiHUD({
       exit={prefersReduced ? { opacity: 0 } : { y: 60, opacity: 0 }}
       transition={hudTransition}
     >
-      <div className="backdrop-blur-xl bg-[--bg-darker]/90 border border-violet-500/30 rounded-3xl px-8 py-6 shadow-2xl md:shadow-none">
+      <div className="bg-black border border-white/15 rounded-3xl px-8 py-6 md:shadow-none">
         <div className="flex flex-col items-center gap-4">
           {/* Waveform visualization */}
           <AnimatePresence>
@@ -54,7 +54,7 @@ export function VapiHUD({
                 {waveformData.map((height, index) => (
                   <motion.div
                     key={index}
-                    className="w-1.5 bg-gradient-to-t from-violet-600 to-teal-400 rounded-full"
+                    className="w-1.5 bg-[--color-electric-iris] rounded-full"
                     animate={{
                       height: isRecording 
                         ? (prefersReduced ? '50%' : `${height * 100}%`) 
@@ -80,8 +80,8 @@ export function VapiHUD({
               disabled={isWaitingForAssistant || isInitializing || isSaving}
               className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                 isRecording 
-                  ? 'bg-gradient-to-br from-red-500 to-crimson-600' 
-                  : 'bg-gradient-to-br from-violet-600 to-purple-700'
+                  ? 'bg-red-500' 
+                  : 'bg-[--color-electric-iris]'
               } ${(isWaitingForAssistant || isInitializing || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
               whileHover={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 1.1 }}
               whileTap={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 0.95 }}

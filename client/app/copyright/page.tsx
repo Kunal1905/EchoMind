@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { ArrowLeft, Shield, Scale, Info, FileText, CheckCircle, Ban } from "lucide-react";
 import { motion } from "motion/react";
+import ConstellationField from "../components/ConstellationField";
 
 export default function CopyrightPage() {
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -13,13 +14,14 @@ export default function CopyrightPage() {
   });
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pt-20 pb-20 px-4 text-white">
-      <div className="mx-auto max-w-3xl">
+    <main className="void-page pt-20 pb-20 px-4 text-white">
+      <ConstellationField density="ambient" className="fixed opacity-30" />
+      <div className="relative z-10 mx-auto max-w-3xl">
         {/* Back Link */}
         <div className="mb-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="void-ghost inline-flex items-center gap-2"
           >
             <ArrowLeft size={16} />
             Back to Home
@@ -28,24 +30,24 @@ export default function CopyrightPage() {
 
         {/* Title / Hero */}
         <header className="mb-12 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm text-violet-300">
+          <div className="void-kicker mb-5 inline-flex items-center gap-2">
             <Scale size={16} />
             IP & Copyright Policy Draft
           </div>
-          <h1 className="mb-4 bg-gradient-to-r from-violet-400 via-fuchsia-400 to-teal-400 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
+          <h1 className="void-heading mb-4">
             Intellectual Property Policy
           </h1>
-          <p className="text-gray-400 text-sm">Last updated: {currentDate}</p>
+          <p className="text-[--color-ash-gray] text-sm">Last updated: {currentDate}</p>
         </header>
 
         {/* Disclaimer Callout */}
-        <div className="mb-8 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-sm text-yellow-200/90 leading-relaxed">
-          <strong className="text-yellow-400">Important Note:</strong> This is a working draft based on a review of the EchoMind codebase. It does not constitute legal advice. If you want DMCA safe-harbor protection (for US-based users or hosting), please consult with a lawyer to formally register a DMCA agent with the US Copyright Office.
+        <div className="mb-8 border-t border-b border-yellow-500/30 py-4 text-sm text-yellow-200/90 leading-relaxed">
+          <strong className="text-[--color-saffron-spark]">Important Note:</strong> This is a working draft based on a review of the EchoMind codebase. It does not constitute legal advice. If you want DMCA safe-harbor protection (for US-based users or hosting), please consult with a lawyer to formally register a DMCA agent with the US Copyright Office.
         </div>
 
         {/* Content Card */}
         <motion.div
-          className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-xl backdrop-blur-xl space-y-8"
+          className="space-y-8 border-t void-hairline pt-8"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -166,5 +168,4 @@ export default function CopyrightPage() {
     </main>
   );
 }
-
 

@@ -54,7 +54,7 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
 
           {/* Modal */}
           <motion.div
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-br from-gray-900 to-violet-950/50 border border-violet-500/30 rounded-2xl p-6 z-50 shadow-2xl text-white"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-black border border-white/15 rounded-2xl p-6 z-50 text-white"
             initial={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={prefersReduced ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
@@ -68,7 +68,7 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
           >
             <h3
               id="mood-check-title"
-              className="text-center text-xl font-bold mb-2 bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent"
+              className="void-subheading mb-2 text-center"
             >
               How are you feeling now?
             </h3>
@@ -83,7 +83,7 @@ export function MoodCheckModal({ isOpen, sessionId, onDone }: MoodCheckModalProp
                   onClick={() => submitMood(opt.score)}
                   disabled={isSubmitting}
                   aria-label={opt.label}
-                  className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl bg-violet-950/30 border border-violet-500/10 hover:border-violet-500/40 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border border-white/15 bg-transparent hover:border-[--color-electric-iris] transition-colors disabled:opacity-50 cursor-pointer"
                   whileHover={prefersReduced ? {} : { scale: 1.05 }}
                   whileTap={prefersReduced ? {} : { scale: 0.95 }}
                   transition={{ ease: EASES.smooth, duration: DURATIONS.fast }}

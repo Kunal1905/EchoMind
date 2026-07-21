@@ -1,5 +1,14 @@
 @layer tokens {
   :root {
+    /* Dala-inspired void palette */
+    --color-void: #000000;
+    --color-bone-white: #ffffff;
+    --color-ash-gray: #9a9a9a;
+    --color-silver-mist: #bdbdbd;
+    --color-electric-iris: #8052ff;
+    --color-saffron-spark: #ffb829;
+    --color-deep-verdant: #15846e;
+
     /* Neural Core Palette */
     --neural-violet: #8b5cf6;
     --neural-violet-light: #a78bfa;
@@ -44,10 +53,10 @@
     --depth-3: rgba(20, 20, 35, 0.98);
 
     /* Background */
-    --bg-deep: #050508;
-    --bg-dark: #0a0a0f;
-    --bg-card: #0f0f1a;
-    --bg-elevated: #141423;
+    --bg-deep: var(--color-void);
+    --bg-dark: var(--color-void);
+    --bg-card: var(--color-void);
+    --bg-elevated: var(--color-void);
 
     /* Text */
     --text-primary: #fafafa;

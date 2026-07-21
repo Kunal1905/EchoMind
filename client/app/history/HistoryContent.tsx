@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs";
 import api from "../lib/api";
 import { MoodChart } from "../components/MoodChart";
 import { usePostHog } from "posthog-js/react";
+import ConstellationField from "../components/ConstellationField";
 
 
 interface Session {
@@ -107,28 +108,29 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
     fetchData();
   }, [isLoaded, isSignedIn]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-gray-900">Loading...</div>;
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-black">Loading...</div>;
   if (!isSignedIn) return (
-    <div className="h-screen flex items-center justify-center bg-gray-900">
-      <div className="p-8 bg-gray-800 rounded-xl shadow-xl text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">🔒 Please Sign In</h2>
-        <p className="text-gray-300 mb-6">Session history is only available for logged-in users.</p>
-        <Link href="/sign-in" className="px-6 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full text-white font-medium hover:from-violet-500 hover:to-teal-400 transition-all">
+    <div className="void-page flex h-screen items-center justify-center px-4">
+      <ConstellationField density="ambient" className="opacity-50" />
+      <div className="relative z-10 max-w-md text-center">
+        <h2 className="void-subheading mb-4">Please sign in.</h2>
+        <p className="void-copy mb-6">Session history is only available for logged-in users.</p>
+        <Link href="/sign-in" className="void-pill">
           Sign In
         </Link>
       </div>
     </div>
   );
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-900"><Loader2 className="animate-spin text-violet-400" size={48} /></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[--color-electric-iris]" size={48} /></div>;
   if (error) return (
-    <div className="p-8 text-red-400 bg-gray-900 min-h-screen flex items-center justify-center">
+    <div className="p-8 text-red-400 bg-black min-h-screen flex items-center justify-center">
       <div className="max-w-2xl text-center">
-        <AlertTriangle className="mx-auto mb-4 text-yellow-400" size={48} />
-        <h2 className="text-2xl font-bold text-white mb-2">⚠️ Error Loading History</h2>
-        <p className="text-gray-300 mb-4">{error}</p>
+        <AlertTriangle className="mx-auto mb-4 text-[--color-saffron-spark]" size={48} />
+        <h2 className="void-subheading mb-2">Error loading history</h2>
+        <p className="void-copy mb-4">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+          className="void-pill"
         >
           Retry
         </button>
@@ -148,21 +150,28 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950 pt-20 pb-16 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-violet-400 to-teal-300 bg-clip-text text-transparent mb-4">
-            📚 Session History
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            Review your journey of self-discovery and emotional growth
+    <div className="void-page pt-24 pb-24">
+      <ConstellationField density="ambient" className="fixed opacity-40" />
+      <div className="void-section">
+        <div className="mb-16 grid gap-8 md:grid-cols-[1.05fr_0.95fr] md:items-end">
+          <div>
+            <p className="void-kicker mb-5">History</p>
+            <h1 className="void-display">Patterns from previous echoes.</h1>
+          </div>
+          <p className="void-copy">
+            Review summaries, mood movement, and moments worth returning to without turning your private reflection into clutter.
           </p>
         </div>
 
         {moodEntries.length > 0 && (
-          <motion.div className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl p-6 mb-8 shadow-xl">
-            <h3 className="flex items-center gap-3 text-xl font-bold text-violet-300 mb-4">
-              <Sparkles className="text-yellow-400" /> Mood Timeline
+          <motion.div
+            className="mb-16 border-t void-hairline pt-8"
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="void-subheading mb-6 flex items-center gap-3">
+              <Sparkles className="text-[--color-saffron-spark]" /> Mood Timeline
             </h3>
             <MoodChart entries={moodEntries.map(entry => ({
               id: entry.id,
@@ -177,82 +186,84 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
         )}
 
         {sessions.length > 0 && (
-          <motion.div className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl p-6 mb-8 shadow-xl">
-            <h3 className="flex items-center gap-3 text-xl font-bold text-violet-300 mb-4">
-              <Sparkles className="text-yellow-400" /> Latest Session Insights
+          <motion.div
+            className="mb-16 grid gap-8 border-t void-hairline pt-8 md:grid-cols-[1.1fr_0.9fr]"
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div>
+              <p className="void-kicker mb-5">Latest insight</p>
+              <h3 className="void-subheading mb-5">
+                The most recent thread in your reflection.
             </h3>
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="md:w-2/3">
-                <div className="text-gray-200 whitespace-pre-line leading-relaxed">
+              <div className="void-copy whitespace-pre-line">
                   {sessions[0].summary || "No summary available."}
-                </div>
               </div>
-              <div className="md:w-1/3 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Calendar className="text-violet-400" size={18} />
+            </div>
+            <div className="flex flex-col gap-4 text-[--color-silver-mist]">
+                <div className="flex items-center gap-2">
+                  <Calendar className="text-[--color-electric-iris]" size={18} />
                   <span>{formatDisplayDate(sessions[0].createdAt)}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <MessageCircle className="text-violet-400" size={18} />
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="text-[--color-electric-iris]" size={18} />
                   <span>Recent Session</span>
                 </div>
-              </div>
             </div>
           </motion.div>
         )}
 
         {sessions.length === 0 && (
           <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 rounded-full bg-violet-900/20 flex items-center justify-center mb-6">
-              <Brain className="text-violet-400" size={48} />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-3">No Sessions Yet</h3>
-            <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            <Brain className="mx-auto mb-6 text-[--color-electric-iris]" size={48} />
+            <h3 className="void-subheading mb-3">No sessions yet.</h3>
+            <p className="void-copy mx-auto mb-6 max-w-md">
               Your therapeutic journey begins with your first conversation. Start a session to see your history here.
             </p>
             <button
               onClick={() => onNavigate("home")}
-              className="px-6 py-3 bg-gradient-to-r from-violet-600 to-teal-500 rounded-full text-white font-medium hover:from-violet-500 hover:to-teal-400 transition-all shadow-lg"
+              className="void-pill"
             >
               Start Your First Session
             </button>
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-0 border-t void-hairline">
           {sessions.map((s, index) => (
             <motion.div
               key={s.sessionId}
-              className="backdrop-blur-xl bg-gray-800/30 border border-violet-500/20 rounded-2xl overflow-hidden shadow-lg"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              className="border-b void-hairline"
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <div className="flex items-center hover:bg-gray-700/30 transition-colors w-full pr-4">
+              <div className="flex items-center transition-colors w-full pr-4">
                 <button
-                  className="flex-1 p-5 flex justify-between items-center text-left"
+                  className="flex-1 py-6 flex justify-between items-center text-left"
                   onClick={() => setExpandedSession(prev => prev === s.sessionId ? null : s.sessionId)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="text-2xl">🧠</div>
                     <div className="text-left">
                       <div className="flex items-center gap-2 text-white">
-                        <Calendar className="text-violet-400" size={16} />
+                        <Calendar className="text-[--color-electric-iris]" size={16} />
                         <span>{new Date(s.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div className="text-sm text-gray-400 mt-1">
+                      <div className="text-sm text-[--color-ash-gray] mt-1">
                         {new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
-                  <ChevronDown className={`transform transition-transform ${expandedSession === s.sessionId ? "rotate-180" : ""} text-violet-400`} />
+                  <ChevronDown className={`transform transition-transform ${expandedSession === s.sessionId ? "rotate-180" : ""} text-[--color-electric-iris]`} />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteSession(s.sessionId);
                   }}
-                  className="p-3 text-gray-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+                  className="p-3 text-[--color-ash-gray] hover:text-red-400 transition-colors"
                   title="Delete session"
                 >
                   <Trash2 size={18} />
@@ -266,14 +277,14 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-violet-500/20"
+                    className="border-t void-hairline"
                   >
-                    <div className="p-5 bg-gray-800/50">
+                    <div className="py-6">
                       <div>
-                        <h4 className="flex items-center gap-2 text-violet-300 font-bold mb-3">
-                          <Brain className="text-violet-400" size={18} /> Session Summary
+                        <h4 className="void-kicker mb-3 flex items-center gap-2">
+                          <Brain className="text-[--color-electric-iris]" size={18} /> Session Summary
                         </h4>
-                        <div className="text-gray-300 whitespace-pre-line leading-relaxed">
+                        <div className="void-copy whitespace-pre-line">
                           {s.summary || "No summary available."}
                         </div>
                       </div>

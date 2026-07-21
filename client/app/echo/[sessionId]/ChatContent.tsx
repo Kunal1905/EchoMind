@@ -14,6 +14,7 @@ import api from "@/app/lib/api";
 import { usePostHog } from "posthog-js/react";
 import { PrivacyConsentModal } from "../../components/PrivacyConsentModal";
 import { MoodCheckModal } from "../../components/MoodCheckModal";
+import ConstellationField from "../../components/ConstellationField";
 
 
 interface Message {
@@ -527,29 +528,30 @@ export function ChatContent({
 
   /* ---------------- UI ---------------- */
   return (
-    <div className="min-h-screen neural-bg pt-20 px-4 pb-40"> {/* Increased pb-40 to ensure space for the mic button */}
+    <div className="void-page pt-24 px-4 pb-40">
+      <ConstellationField density="ambient" className="fixed opacity-35" />
       {/* Header */}
-      <div className="container mx-auto max-w-4xl mb-6">
+      <div className="relative z-10 container mx-auto max-w-4xl mb-10">
         <div className="flex items-center justify-between">
           <button
             onClick={() => onNavigate("home")}
-            className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+            className="void-ghost flex items-center gap-2"
           >
             <ArrowLeft size={20} /> Back
           </button>
-          <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-teal-300">
+          <h3 className="void-kicker">
             Echo Session
           </h3>
         </div>
       </div>
 
       {/* Main Content - Centered for larger screens */}
-      <div className="container mx-auto max-w-4xl">
+      <div className="relative z-10 container mx-auto max-w-4xl">
         <div className="flex flex-col items-center">
           {/* Chat Area - Centered on all screens */}
           <div className="w-full max-w-2xl">
             {sessionNotice && (
-              <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
+              <div className="mb-4 border-t border-b border-amber-400/30 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-amber-100">{sessionNotice.title}</p>
@@ -557,7 +559,7 @@ export function ChatContent({
                   </div>
                   <button
                     onClick={() => onNavigate("sessions")}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-gray-950 transition-colors hover:bg-amber-300"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[--color-saffron-spark] px-4 py-2 text-sm font-semibold text-black transition-colors hover:opacity-90"
                   >
                     <CreditCard size={16} />
                     View plans
@@ -565,18 +567,18 @@ export function ChatContent({
                 </div>
               </div>
             )}
-            <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 bg-gray-900/30">
+            <div className="border-t void-hairline pt-6">
               <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                <div className="flex items-center justify-between rounded-xl border border-violet-500/20 bg-gray-900/30 px-4 py-3">
-                  <span className="text-gray-300 flex items-center gap-2">
-                    <Clock className="text-violet-400" size={18} /> Session Time
+                <div className="flex items-center justify-between border-t void-hairline py-3">
+                  <span className="text-[--color-silver-mist] flex items-center gap-2">
+                    <Clock className="text-[--color-electric-iris]" size={18} /> Session Time
                   </span>
                   <span className="text-2xl font-mono text-white">
                     {formatTime(sessionTime)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-teal-500/20 bg-gray-900/30 px-4 py-3">
-                  <span className="text-gray-300">Minutes Remaining</span>
+                <div className="flex items-center justify-between border-t void-hairline py-3">
+                  <span className="text-[--color-silver-mist]">Minutes Remaining</span>
                   <span className="text-2xl font-mono text-white">
                     {premiumCalls}
                   </span>
@@ -586,7 +588,7 @@ export function ChatContent({
 
 
               {/* Messages Container */}
-              <div className="backdrop-blur-xl border border-violet-500/20 rounded-2xl p-6 min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-900/20">
+              <div className="border-t border-b void-hairline p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <EchoOrb size="lg" isPulsing={isRecording} />
@@ -597,8 +599,8 @@ export function ChatContent({
                             key={l.code}
                             onClick={() => setLanguage(l.code as any)}
                             className={`px-4 py-2 rounded-full text-sm transition-all ${language === l.code
-                              ? "bg-violet-600 text-white"
-                              : "bg-gray-800/60 text-gray-400 hover:text-white"
+                              ? "bg-[--color-electric-iris] text-white"
+                              : "bg-transparent text-[--color-ash-gray] hover:text-white"
                               }`}
                           >
                             {l.label}
@@ -607,18 +609,18 @@ export function ChatContent({
                       </div>
                     )}
                     {!isRecording && premiumCalls <= 3 && premiumCalls > 0 && (
-                      <p className="text-amber-400 text-sm text-center mb-2">
-                        ⏱️ You have {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} left. This session will end
+                      <p className="text-[--color-saffron-spark] text-sm text-center mb-2">
+                        You have {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} left. This session will end
                         automatically when your time runs out.
                       </p>
                     )}
-                    <p className="text-gray-400 animate-pulse text-lg">
+                    <p className="text-[--color-silver-mist] animate-pulse text-lg">
                       {isRecording
-                        ? "🎙️ Waiting for assistant to respond..."
-                        : "Press the mic to start your session 🚀"}
+                        ? "Waiting for assistant to respond..."
+                        : "Press the mic to start your session."}
                     </p>
-                    <p className="text-gray-500 text-sm max-w-md">
-                      Share your thoughts and feelings freely. I'm here to
+                    <p className="text-[--color-ash-gray] text-sm max-w-md">
+                      Share your thoughts and feelings freely. I&apos;m here to
                       listen and help you explore your emotions.
                     </p>
                   </div>
@@ -635,8 +637,8 @@ export function ChatContent({
                         >
                           <div
                             className={`max-w-[85%] px-4 py-3 rounded-2xl border ${msg.sender === "user"
-                              ? "bg-gradient-to-r from-violet-600/30 to-violet-700/30 border-violet-500/40 text-white rounded-br-none"
-                              : "bg-gray-800/60 border-gray-700/40 text-gray-200 rounded-bl-none"
+                              ? "border-[--color-electric-iris] bg-[--color-electric-iris] text-white rounded-br-none"
+                              : "border-white/15 bg-transparent text-[--color-silver-mist] rounded-bl-none"
                               }`}
                           >
                             <p>{msg.text}</p>
@@ -660,9 +662,9 @@ export function ChatContent({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <div className="flex items-center justify-center gap-2 p-4 bg-gray-800/50 rounded-xl">
-                  <Loader2 className="animate-spin text-violet-400" size={20} />
-                  <span className="text-gray-300">Starting session...</span>
+                <div className="flex items-center justify-center gap-2 border-t void-hairline py-4">
+                  <Loader2 className="animate-spin text-[--color-electric-iris]" size={20} />
+                  <span className="text-[--color-silver-mist]">Starting session...</span>
                 </div>
               </motion.div>
             )}
@@ -677,9 +679,9 @@ export function ChatContent({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <div className="flex items-center justify-center gap-2 p-4 bg-gray-800/50 rounded-xl">
-                  <Loader2 className="animate-spin text-violet-400" size={20} />
-                  <span className="text-gray-300">Saving session...</span>
+                <div className="flex items-center justify-center gap-2 border-t void-hairline py-4">
+                  <Loader2 className="animate-spin text-[--color-electric-iris]" size={20} />
+                  <span className="text-[--color-silver-mist]">Saving session...</span>
                 </div>
               </motion.div>
             )}
@@ -706,14 +708,14 @@ export function ChatContent({
               setConsentGranted(granted);
               startVoiceSession(granted);
             }}
-            {...moodModalSessionId && (
+          />
+          {moodModalSessionId && (
             <MoodCheckModal
               isOpen={!!moodModalSessionId}
               sessionId={moodModalSessionId}
               onDone={closeMoodModal}
             />
           )}
-          />
         </div>
       </div>
     </div>
