@@ -1,9 +1,13 @@
-import { SignIn } from '@clerk/nextjs'
+import { SignIn } from "@clerk/nextjs";
+import AuthLayout, { clerkAppearance } from "@/app/components/AuthLayout";
 
-export default function Page() {
+export default function SignInPage() {
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <SignIn path="/sign-in" />
-    </div>
+    <AuthLayout mode="sign-in">
+      <SignIn
+        path="/sign-in"
+        appearance={clerkAppearance}
+      />
+    </AuthLayout>
   );
 }
