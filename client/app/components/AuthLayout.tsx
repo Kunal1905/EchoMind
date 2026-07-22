@@ -150,15 +150,17 @@ export const clerkAppearance = {
     spacingUnit: "1rem",
   },
   elements: {
-    card: "shadow-none border-0 bg-transparent p-0",
-    rootBox: "w-full",
+    card: "shadow-none border-0 bg-transparent p-0 overflow-visible",
+    rootBox: "w-full overflow-visible",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     formHeader: "hidden",
 
-    socialButtonsBlockButton: "h-12",
+    socialButtonsBlockButton: "relative flex flex-row items-center justify-center gap-3 h-12 w-full px-4 border border-white/10 hover:bg-white/5 transition-all duration-200",
     socialButtonsBlockButtonText: "text-white text-sm font-medium",
+    socialButtonsBlockButtonLogo: "h-5 w-5 flex-shrink-0 flex items-center justify-center mr-0",
     socialButtonsBlockButtonArrow: "hidden",
+    socialButtonsBlockButtonBadge: "absolute -top-2.5 right-4 bg-[#8052ff] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#090910] shadow-sm",
 
     dividerRow: "my-1",
     dividerText: "text-xs",
@@ -173,6 +175,8 @@ export const clerkAppearance = {
 
     footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] font-medium transition-colors",
     footerActionText: "text-[#9a9a9a] text-[13px]",
+    footer: "bg-transparent mt-4 overflow-visible pb-2",
+    footerBranding: "mt-4 flex justify-center items-center overflow-visible pb-2",
 
     alert: "rounded-xl border border-[#f43f5e]/20 bg-[#f43f5e]/8 text-[#f43f5e] text-sm p-3",
     alertText: "text-[#f43f5e] text-sm",
@@ -413,7 +417,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             <div
               className="relative rounded-2xl"
               style={{
-                padding: "32px 32px 28px",
+                padding: "32px 32px 36px",
                 background: "rgba(9, 9, 16, 0.88)",
                 backdropFilter: "blur(28px)",
                 WebkitBackdropFilter: "blur(28px)",
