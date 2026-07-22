@@ -74,6 +74,18 @@ app.use(cors({
       return callback(null, true);
     }
 
+    // In development, dynamically allow any localhost / 127.0.0.1 port
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const url = new URL(cleaned);
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+          return callback(null, true);
+        }
+      } catch (err) {
+        // ignore invalid URL
+      }
+    }
+
     console.warn(`[cors] Rejected origin: ${requestOrigin}. Allowed origins: ${uniqueAllowedOrigins.join(", ")}`);
     return callback(null, false);
   },
