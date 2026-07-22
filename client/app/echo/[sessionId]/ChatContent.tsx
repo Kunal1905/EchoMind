@@ -593,15 +593,27 @@ export function ChatContent({
                   <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                     <EchoOrb size="lg" isPulsing={isRecording} />
                     {!isRecording && !isInitializing && (
-                      <div className="flex justify-center gap-2 mb-4">
+                      <div className="flex flex-wrap justify-center gap-2 mb-5">
                         {LANGUAGES.map((l) => (
                           <button
                             key={l.code}
-                            onClick={() => setLanguage(l.code as any)}
-                            className={`px-4 py-2 rounded-full text-sm transition-all ${language === l.code
-                              ? "bg-[--color-electric-iris] text-white"
-                              : "bg-transparent text-[--color-ash-gray] hover:text-white"
-                              }`}
+                            type="button"
+                            onClick={() => setLanguage(l.code as "en" | "hi" | "mr" | "ta")}
+                            style={
+                              language === l.code
+                                ? {
+                                    background: "rgba(128, 82, 255, 0.18)",
+                                    border: "1px solid rgba(128, 82, 255, 0.7)",
+                                    color: "#c4b0ff",
+                                    boxShadow: "0 0 12px rgba(128, 82, 255, 0.25)",
+                                  }
+                                : {
+                                    background: "transparent",
+                                    border: "1px solid rgba(255, 255, 255, 0.14)",
+                                    color: "#9a9a9a",
+                                  }
+                            }
+                            className="px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer select-none transition-all duration-200 hover:border-white/30 hover:text-white active:scale-95"
                           >
                             {l.label}
                           </button>

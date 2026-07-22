@@ -41,7 +41,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
               </h2>
             </motion.div>
 
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPage === item.id;
@@ -71,13 +71,8 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
               })}
               <SignedIn>
                 <UserButton
-                  appearance={{
-                    elements: {
-                      userButtonAvatarBox: "h-9 w-9",
-                      userButtonTrigger: "h-9 w-9 rounded-full",
-                      userButtonPopoverCard: "max-w-xs bg-black border border-white/15 shadow-none",
-                    },
-                  }}
+                  afterSignOutUrl="/sign-in"
+                  showName={false}
                 />
               </SignedIn>
 
@@ -122,8 +117,10 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
         </div>
       </nav>
 
+      {/* Mobile top header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-violet-500/15 bg-black/95 backdrop-blur-lg">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center px-4 py-3">
+          {/* Logo — left aligned */}
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-teal-500">
               <MessageCircle size={16} className="text-white" />
@@ -132,15 +129,14 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
               EchoMind
             </h3>
           </div>
+
+          {/* Spacer pushes UserButton to the far right */}
+          <div className="flex-1" />
+
           <SignedIn>
             <UserButton
-              appearance={{
-                elements: {
-                  userButtonAvatarBox: "h-8 w-8",
-                  userButtonTrigger: "h-8 w-8 rounded-full",
-                  userButtonPopoverCard: "max-w-xs bg-black border border-white/15 shadow-none",
-                },
-              }}
+              afterSignOutUrl="/sign-in"
+              showName={false}
             />
           </SignedIn>
 
