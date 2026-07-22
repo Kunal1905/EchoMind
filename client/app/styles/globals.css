@@ -243,16 +243,21 @@ button {
   object-fit: cover !important;
 }
 
-/* ── UserButton popover — clean dark dropdown ── */
+/* ── UserButton popover — solid dark dropdown, never transparent ── */
 .cl-userButtonPopoverCard {
-  width: min(272px, calc(100vw - 24px)) !important;
-  max-width: 272px !important;
-  background: #08080e !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  width: min(268px, calc(100vw - 24px)) !important;
+  max-width: 268px !important;
+  background: #0d0d14 !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
   border-radius: 16px !important;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255,255,255,0.03) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 8px 16px rgba(0, 0, 0, 0.5),
+    0 24px 64px rgba(0, 0, 0, 0.8) !important;
   padding: 0 !important;
   overflow: hidden !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
 }
 .cl-userButtonPopoverCard * {
   font-family: var(--font-inter), system-ui, sans-serif !important;
@@ -264,36 +269,35 @@ button {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  padding: 16px 16px 14px !important;
+  padding: 14px 14px 12px !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  background: transparent !important;
 }
-/* Large circle avatar inside popover */
 .cl-userPreviewAvatarBox,
 .cl-userPreviewAvatarBox .cl-avatarBox {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
   border-radius: 9999px !important;
   overflow: hidden !important;
   flex-shrink: 0 !important;
 }
 .cl-userPreviewAvatarBox img,
 .cl-userPreviewAvatarBox .cl-avatarImage {
-  width: 40px !important;
-  height: 40px !important;
+  width: 38px !important;
+  height: 38px !important;
   border-radius: 9999px !important;
   object-fit: cover !important;
   display: block !important;
 }
-/* Text stack: name then email */
 .cl-userPreviewTextContainer {
   display: flex !important;
   flex-direction: column !important;
-  gap: 2px !important;
+  gap: 1px !important;
   min-width: 0 !important;
 }
 .cl-userPreviewMainIdentifier {
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   color: #ffffff !important;
   line-height: 1.3 !important;
@@ -302,9 +306,9 @@ button {
   text-overflow: ellipsis !important;
 }
 .cl-userPreviewSecondaryIdentifier {
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 400 !important;
-  color: #71717a !important;
+  color: #6b7280 !important;
   line-height: 1.3 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -313,7 +317,8 @@ button {
 
 /* ── Action buttons (Manage account / Sign out) ── */
 .cl-userButtonPopoverActions {
-  padding: 6px !important;
+  padding: 5px !important;
+  background: transparent !important;
 }
 .cl-userButtonPopoverActionButton,
 .cl-userButtonPopoverActionButton__manageAccount,
@@ -322,38 +327,72 @@ button {
   align-items: center !important;
   width: 100% !important;
   gap: 10px !important;
-  padding: 9px 12px !important;
-  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 9px !important;
   font-size: 13px !important;
   font-weight: 500 !important;
-  color: #d4d4d8 !important;
+  color: #d1d5db !important;
   background: transparent !important;
   border: none !important;
   cursor: pointer !important;
   transition: background 120ms ease, color 120ms ease !important;
   text-align: left !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 10 !important;
 }
 .cl-userButtonPopoverActionButton:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
   color: #ffffff !important;
 }
 .cl-userButtonPopoverActionButton__signOut {
-  color: #9a9a9a !important;
+  color: #9ca3af !important;
 }
 .cl-userButtonPopoverActionButton__signOut:hover {
-  background: rgba(244, 63, 94, 0.08) !important;
-  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #fca5a5 !important;
 }
-/* Icons inside action buttons */
+/* Icons */
 .cl-userButtonPopoverActionButtonIcon,
 .cl-userButtonPopoverActionButton svg {
-  width: 16px !important;
-  height: 16px !important;
+  width: 15px !important;
+  height: 15px !important;
+  color: #6b7280 !important;
+  flex-shrink: 0 !important;
 }
-.cl-userButtonPopoverActionButton:hover svg,
-.cl-userButtonPopoverActionButton:hover .cl-userButtonPopoverActionButtonIcon {
-  color: #a1a1aa !important;
+.cl-userButtonPopoverActionButton:hover .cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverActionButton:hover svg {
+  color: #9ca3af !important;
 }
+
+/* ── Footer: "Secured by Clerk  ·  Development mode" — one compact line ── */
+.cl-userButtonPopoverFooter {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 7px 12px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.015) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  max-height: 34px !important;
+}
+.cl-userButtonPopoverFooter > * {
+  transform: scale(0.62) !important;
+  transform-origin: center !important;
+  opacity: 0.4 !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.cl-userButtonPopoverFooter svg,
+.cl-userButtonPopoverFooter img {
+  height: 11px !important;
+  width: auto !important;
+  flex-shrink: 0 !important;
+}
+
 
 /* ── Auth card (sign-in / sign-up pages) ── */
 .cl-card,
