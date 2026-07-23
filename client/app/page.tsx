@@ -19,6 +19,7 @@ const defaultSubscriptionData = {
   premiumCallsRemaining: FREE_TRIAL_LIMIT,
   premiumCallsTotal: FREE_TRIAL_LIMIT,
   isPremium: false,
+  plan: "free" as "free" | "basic" | "pro" | "premium",
 };
 
 const loadRazorpayCheckout = () =>
@@ -83,6 +84,7 @@ export default function Home() {
             premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
             premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? FREE_TRIAL_LIMIT,
             isPremium: data.isPremium || false,
+            plan: data.plan || "free",
           });
         } else {
           console.error("Failed to fetch subscription data:", response.status);
@@ -136,6 +138,7 @@ export default function Home() {
               isPremium: sub.data.isPremium ?? false,
               freeTrialUsed: sub.data.freeTrialUsed ?? 0,
               freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
+              plan: sub.data.plan || "free",
             });
             alert("Payment successful! Your minutes have been added.");
           } catch (e) {
@@ -183,6 +186,7 @@ export default function Home() {
           premiumCallsRemaining: data.premiumCallsRemaining ?? data.minutesRemaining ?? 0,
           premiumCallsTotal: data.premiumCallsTotal ?? data.minutesTotal ?? FREE_TRIAL_LIMIT,
           isPremium: data.isPremium || false,
+          plan: data.plan || "free",
         });
       }
     } catch (error) {
@@ -238,6 +242,7 @@ export default function Home() {
                   return handleUpgrade(mappedPlanId);
                 }}
                 isPremium={subscriptionData.isPremium}
+                currentPlan={subscriptionData.plan}
               />
             )}
 
