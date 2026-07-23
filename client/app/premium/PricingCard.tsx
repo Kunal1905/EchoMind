@@ -48,14 +48,18 @@ export default function PricingCard({
   return (
     <motion.div
       initial={{ opacity: 0, y: 40, scale: 0.98 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-10% 0px" }}
-      transition={{ 
-        delay: index * 0.1,
-        type: "spring",
-        stiffness: 100,
-        damping: 15
+      whileInView={{ 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        transition: {
+          delay: index * 0.1,
+          type: "spring",
+          stiffness: 100,
+          damping: 15
+        }
       }}
+      viewport={{ once: true, margin: "-10% 0px" }}
       animate={
         isHovered
           ? { 
@@ -182,10 +186,10 @@ export default function PricingCard({
                 animate={isHovered ? { rotate: 15, scale: 1.05 } : { rotate: 0, scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                {React.cloneElement(icon as React.ReactElement, {
+                {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, {
                   className: "w-6 h-6",
                   style: { color: accent }
-                })}
+                }) : icon}
               </motion.div>
             </div>
 
