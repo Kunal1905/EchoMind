@@ -28,12 +28,33 @@ interface MoodEntry {
   createdAt: string;
 }
 
+// Module-level cache to persist data across page mounts/navigations
+let cachedSessions: Session[] | null = null;
+let cachedMoodEntries: MoodEntry[] | null = null;
+let cachedUserId: string | null = null;
+let hasLoadedOnce = false;
+
 export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = false }: { onNavigate?: (p: string) => void; isPremium?: boolean; }) {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const posthog = usePostHog();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<Session[]>(() => {
+    if (user?.id && cachedUserId === user.id && cachedSessions) {
+      return cachedSessions;
+    }
+    return [];
+  });
+  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>(() => {
+    if (user?.id && cachedUserId === user.id && cachedMoodEntries) {
+      return cachedMoodEntries;
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (user?.id && cachedUserId === user.id && hasLoadedOnce) {
+      return false;
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
@@ -43,8 +64,14 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
       const response = await api.delete(`/session-chat/${sessionId}`);
       if (response.status >= 200 && response.status < 300) {
         // Remove from local states
-        setSessions(prev => prev.filter(s => s.sessionId !== sessionId));
-        setMoodEntries(prev => prev.filter(m => m.sessionId !== sessionId));
+        const updatedSessions = sessions.filter(s => s.sessionId !== sessionId);
+        const updatedMood = moodEntries.filter(m => m.sessionId !== sessionId);
+        setSessions(updatedSessions);
+        setMoodEntries(updatedMood);
+
+        // Keep cache in sync
+        cachedSessions = updatedSessions;
+        cachedMoodEntries = updatedMood;
 
         // Track session deleted event
         posthog.capture("session_deleted");
@@ -60,17 +87,34 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isLoaded || !isSignedIn) return;
-      setLoading(true);
+      if (!isLoaded || !isSignedIn || !user?.id) return;
+
+      // If user has changed, clear the cache
+      if (cachedUserId !== user.id) {
+        cachedSessions = null;
+        cachedMoodEntries = null;
+        cachedUserId = user.id;
+        hasLoadedOnce = false;
+      }
+
+      // If we have cached data, update states immediately so the page is instant
+      if (hasLoadedOnce) {
+        setSessions(cachedSessions || []);
+        setMoodEntries(cachedMoodEntries || []);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       setError(null);
 
-      // ✅ Use allSettled — one endpoint failing doesn't nuke the whole page
+      // Fetch fresh data in the background (stale-while-revalidate)
       const [sessionsResult, moodResult] = await Promise.allSettled([
         api.get("/history"),
         api.get("/mood"),
       ]);
 
-      // Sessions: only treat as a real error if it's a genuine failure (not just empty)
+      // Sessions
       if (sessionsResult.status === "fulfilled") {
         const sessionsData = Array.isArray(sessionsResult.value.data) ? sessionsResult.value.data : [];
         const map = new Map<string, Session>();
@@ -79,34 +123,41 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setSessions(array);
+        cachedSessions = array;
       } else {
-        // Genuine failure fetching sessions — this is the only case that should show the error screen
         const err: any = sessionsResult.reason;
         console.error("Error fetching sessions:", err);
 
-        // Distinguish network failure from a real server error for a clearer message
-        if (!err.response) {
-          setError("Couldn't reach the server. Please check your connection and try again.");
-        } else if (err.response.status === 401) {
-          setError("Your session expired. Please refresh the page.");
-        } else {
-          setError("Something went wrong loading your history. Please try again.");
+        // Only show error page if we don't have any cached data to show
+        if (!hasLoadedOnce) {
+          if (!err.response) {
+            setError("Couldn't reach the server. Please check your connection and try again.");
+          } else if (err.response.status === 401) {
+            setError("Your session expired. Please refresh the page.");
+          } else {
+            setError("Something went wrong loading your history. Please try again.");
+          }
         }
       }
 
-      // Mood: failing here should NEVER block the page — just show no mood chart
+      // Mood
       if (moodResult.status === "fulfilled") {
         const moodData = Array.isArray(moodResult.value.data) ? moodResult.value.data : [];
         setMoodEntries(moodData);
+        cachedMoodEntries = moodData;
       } else {
         console.warn("Mood data unavailable (non-critical):", moodResult.reason);
-        setMoodEntries([]); // graceful — history page still works fine without mood chart
+        if (!hasLoadedOnce) {
+          setMoodEntries([]);
+          cachedMoodEntries = [];
+        }
       }
 
+      hasLoadedOnce = true;
       setLoading(false);
     };
     fetchData();
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, user?.id]);
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-black">Loading...</div>;
   if (!isSignedIn) return (

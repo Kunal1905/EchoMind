@@ -46,13 +46,28 @@ interface SettingsContentProps {
   onNavigate?: (page: string) => void;
 }
 
+// Module-level cache to persist data across page mounts/navigations
+let cachedMyData: MyDataResponse | null = null;
+let cachedUserId: string | null = null;
+let hasLoadedOnce = false;
+
 export function SettingsContent({ onNavigate }: SettingsContentProps) {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const { getToken } = useAuth();
   const posthog = usePostHog();
 
-  const [data, setData] = useState<MyDataResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<MyDataResponse | null>(() => {
+    if (user?.id && cachedUserId === user.id && cachedMyData) {
+      return cachedMyData;
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (user?.id && cachedUserId === user.id && hasLoadedOnce) {
+      return false;
+    }
+    return true;
+  });
   const [error, setError] = useState<string | null>(null);
   
   // Action states
@@ -63,8 +78,23 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!isLoaded || !isSignedIn || !user?.id) return;
+
+    // Clear cache if user changed
+    if (cachedUserId !== user.id) {
+      cachedMyData = null;
+      cachedUserId = user.id;
+      hasLoadedOnce = false;
+    }
+
     try {
-      setLoading(true);
+      if (hasLoadedOnce) {
+        setData(cachedMyData);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       setError(null);
       const token = await getToken();
       const response = await api.get("/my-data", token ? {
@@ -73,23 +103,29 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
       
       if (response.status >= 200 && response.status < 300) {
         setData(response.data);
+        cachedMyData = response.data;
+        hasLoadedOnce = true;
       } else {
-        setError("Failed to load your privacy settings.");
+        if (!hasLoadedOnce) {
+          setError("Failed to load your privacy settings.");
+        }
       }
     } catch (err: unknown) {
       console.error("Error fetching my-data:", err);
       const axiosError = err as { response?: { data?: { error?: string } } };
-      setError(axiosError.response?.data?.error || "Error connecting to the privacy server.");
+      if (!hasLoadedOnce) {
+        setError(axiosError.response?.data?.error || "Error connecting to the privacy server.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, isLoaded, isSignedIn, user?.id]);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    if (isLoaded && isSignedIn && user?.id) {
       fetchData();
     }
-  }, [isLoaded, isSignedIn, fetchData]);
+  }, [isLoaded, isSignedIn, user?.id, fetchData]);
 
   const handleToggleConsent = async () => {
     if (!data || savingConsent) return;
@@ -106,16 +142,15 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
       } : undefined);
 
       if (response.status >= 200 && response.status < 300) {
-        setData(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            account: {
-              ...prev.account,
-              memoryConsent: newConsentVal
-            }
-          };
-        });
+        const updated = {
+          ...data,
+          account: {
+            ...data.account,
+            memoryConsent: newConsentVal
+          }
+        };
+        setData(updated);
+        cachedMyData = updated; // Keep cache in sync
         
         // Save local preference state to keep in sync with local storage
         localStorage.setItem("memory_consent_preference", newConsentVal ? "granted" : "declined");
@@ -136,7 +171,7 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
   };
 
   const handleDeleteAllData = async () => {
-    if (confirmText !== "DELETE ALL" || deletingAll) return;
+    if (confirmText !== "DELETE ALL" || deletingAll || !data) return;
     setDeletingAll(true);
     setSuccessMessage(null);
 
@@ -152,19 +187,18 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
         // Reset local preferences
         localStorage.setItem("memory_consent_preference", "declined");
         
-        // Reset local UI states
-        setData(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            sessions: [],
-            moodEntries: 0,
-            account: {
-              ...prev.account,
-              memoryConsent: false
-            }
-          };
-        });
+        // Reset local UI states and sync cache
+        const updated = {
+          ...data,
+          sessions: [],
+          moodEntries: 0,
+          account: {
+            ...data.account,
+            memoryConsent: false
+          }
+        };
+        setData(updated);
+        cachedMyData = updated; // Keep cache in sync
 
         setShowDeleteModal(false);
         setConfirmText("");
