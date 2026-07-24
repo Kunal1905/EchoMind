@@ -416,7 +416,7 @@ button {
 .cl-main { width: 100% !important; }
 .cl-scrollBox { overflow: visible !important; }
 
-/* ── Auth headers: we render our own ── */
+/* ── Auth headers: we render our own in AuthLayout ── */
 .cl-header,
 .cl-headerTitle,
 .cl-headerSubtitle { display: none !important; }
@@ -431,36 +431,42 @@ button {
 .cl-formFieldRow {
   width: 100% !important;
   display: flex !important;
-  flex-direction: column !important; /* Stack all fields vertically for identical widths */
-  gap: 16px !important; /* Consistent vertical spacing */
+  flex-direction: row !important;
+  gap: 12px !important;
 }
 .cl-formField {
   flex: 1 !important;
-  width: 100% !important;
+  min-width: 0 !important;
   margin-bottom: 0 !important;
 }
 
-/* ── Labels ── */
-.cl-formFieldLabel {
-  display: block !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-  color: #9a9a9a !important;
-  margin-bottom: 8px !important; /* Increased spacing below label before input */
+/* ── Labels & Hints ── */
+.cl-formFieldLabelRow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
 }
-.cl-formFieldLabelRow { margin-bottom: 0 !important; }
+.cl-formFieldLabel {
+  display: inline-block !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: #ffffff !important;
+  margin-bottom: 0 !important;
+}
 .cl-formFieldHintText,
 .cl-formFieldLabelHint,
 .cl-formFieldLabelHintText,
 .cl-formFieldLabelOptional {
-  font-size: 9px !important; /* Smaller, less prominent font */
-  font-weight: 500 !important;
-  color: #71717a !important; /* Muted color */
-  text-transform: none !important; /* Prevent parent uppercase rules */
-  margin-left: 6px !important;
-  opacity: 0.85 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: #71717a !important;
+  text-transform: none !important;
+  margin-left: auto !important;
+  opacity: 1 !important;
 }
 
 /* ── Inputs (email, password, name fields) ── */
@@ -494,7 +500,7 @@ button {
   outline: none !important;
 }
 .cl-formFieldInput[type="password"] {
-  padding-right: 48px !important; /* Prevent text overlap with show password button */
+  padding-right: 48px !important;
 }
 .cl-formFieldInput:focus,
 .cl-formFieldInput:focus-within,
@@ -536,7 +542,7 @@ button {
   height: 48px !important;
   min-height: 48px !important;
   max-height: 48px !important;
-  padding: 0 16px !important; /* Matched to inputs exactly */
+  padding: 0 16px !important;
   border-radius: 12px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
@@ -547,9 +553,15 @@ button {
   border: none !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
-  margin-top: 16px !important; /* Equal vertical spacing */
+  margin-top: 16px !important;
   box-sizing: border-box !important;
   line-height: 1 !important;
+}
+.cl-formButtonPrimary::after {
+  content: " ▸" !important;
+  font-size: 11px !important;
+  margin-left: 6px !important;
+  display: inline-block !important;
 }
 .cl-formButtonPrimary:hover {
   background: linear-gradient(135deg, #9366ff 0%, #6d45d8 100%) !important;
@@ -563,7 +575,6 @@ button {
   opacity: 0.6 !important;
   transform: none !important;
 }
-/* Loading spinner inside button */
 .cl-formButtonPrimary .cl-spinner,
 .cl-formButtonPrimary svg {
   width: 18px !important;
@@ -572,6 +583,7 @@ button {
 
 /* ── Social login (Google) button ── */
 .cl-socialButtonsBlockButton {
+  position: relative !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -624,12 +636,30 @@ button {
 }
 .cl-socialButtonsBlockButtonArrow { display: none !important; }
 
+/* "Last used" pill badge on top-right of Google button */
+.cl-socialButtonsBlockButtonBadge,
+div[class*="cl-socialButtonsBlockButtonBadge"] {
+  position: absolute !important;
+  top: -10px !important;
+  right: 12px !important;
+  background: #8052ff !important;
+  border: 1px solid #090910 !important;
+  color: #ffffff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 2px 6px rgba(128, 82, 255, 0.4) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
 /* ── Divider ("or") ── */
 .cl-dividerRow {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  margin: 16px 0 !important; /* Equal vertical spacing */
+  margin: 16px 0 !important;
 }
 .cl-dividerLine {
   flex: 1 !important;
@@ -637,24 +667,14 @@ button {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 .cl-dividerText {
-  color: #52525b !important;
-  font-size: 12px !important;
+  color: #71717a !important;
+  font-size: 13px !important;
   white-space: nowrap !important;
 }
 
-/* ── "Last used" badge Clerk shows ── */
-.cl-alternativeMethodsBlockButton {
-  height: 48px !important;
-  border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
-  font-size: 14px !important;
-}
-
-/* ── Footer: "Secured by Clerk" branding ── */
+/* ── Footer ── */
 .cl-footer {
-  margin-top: 16px !important; /* Equal vertical spacing */
+  margin-top: 16px !important;
   padding: 0 !important;
 }
 .cl-footerAction {
@@ -663,8 +683,8 @@ button {
 }
 .cl-footerActionLink {
   color: #8052ff !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
   transition: color 0.15s ease !important;
 }
 .cl-footerActionLink:hover {
@@ -672,7 +692,7 @@ button {
 }
 .cl-footerActionText {
   color: #71717a !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 /* The Clerk logo/branding block — keep it on single line, clean spacing and logo size */
 .cl-footerPages,
@@ -688,7 +708,7 @@ div[class*="cl-branding"],
   white-space: nowrap !important;
   flex-wrap: nowrap !important;
   opacity: 0.35 !important;
-  margin: 20px auto 4px auto !important; /* Centered, with spacing above */
+  margin: 20px auto 4px auto !important;
   width: fit-content !important;
   gap: 6px !important;
 }
@@ -704,9 +724,10 @@ div[class*="cl-branding"] svg,
 div[class*="cl-powered"] img,
 div[class*="cl-branding"] img,
 .cl-footer > div:last-child img {
-  height: 10px !important; /* Muted logo height */
+  height: 10px !important;
   width: auto !important;
 }
+
 /* Dev mode badge */
 .cl-badge,
 div[class*="cl-dev"] {

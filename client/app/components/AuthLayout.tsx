@@ -136,7 +136,7 @@ export const clerkAppearance = {
   variables: {
     colorPrimary: "#8052ff",
     colorBackground: "transparent",
-    colorInputBackground: "rgba(255,255,255,0.05)",
+    colorInputBackground: "rgba(255,255,255,0.04)",
     colorInputText: "#ffffff",
     colorText: "#ffffff",
     colorTextSecondary: "#9a9a9a",
@@ -146,7 +146,6 @@ export const clerkAppearance = {
     fontFamily: "var(--font-inter), system-ui, sans-serif",
     fontSize: "14px",
     borderRadius: "12px",
-    // Smaller spacingUnit prevents the oversized button padding multiplication
     spacingUnit: "1rem",
   },
   elements: {
@@ -156,32 +155,33 @@ export const clerkAppearance = {
     headerSubtitle: "hidden",
     formHeader: "hidden",
 
-    socialButtonsBlockButton: "relative flex flex-row items-center justify-center gap-3 h-12 w-full px-4 border border-white/10 hover:bg-white/5 transition-all duration-200",
+    socialButtonsBlockButton: "relative flex flex-row items-center justify-center gap-3 h-12 w-full px-4 border border-white/15 hover:bg-white/5 transition-all duration-200 rounded-xl",
     socialButtonsBlockButtonText: "text-white text-sm font-medium",
     socialButtonsBlockButtonLogo: "h-5 w-5 flex-shrink-0 flex items-center justify-center mr-0",
     socialButtonsBlockButtonArrow: "hidden",
     socialButtonsBlockButtonBadge: "absolute -top-2.5 right-4 bg-[#8052ff] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#090910] shadow-sm",
 
-    dividerRow: "my-1",
-    dividerText: "text-xs",
+    dividerRow: "my-4",
+    dividerText: "text-xs text-[#71717a]",
     dividerLine: "bg-white/10",
 
-    formFieldLabel: "text-[11px] font-semibold uppercase tracking-widest text-[#9a9a9a] mb-1.5",
-    formFieldInput: "h-12 rounded-xl text-sm",
-    formFieldInputShowPasswordButton: "text-[#9a9a9a] hover:text-white",
+    formFieldLabelRow: "flex items-center justify-between w-full mb-1.5",
+    formFieldLabel: "text-sm font-semibold text-white",
+    formFieldHintText: "text-xs font-normal text-[#71717a] ml-auto",
+    formFieldInput: "h-12 rounded-xl text-sm bg-white/5 border-white/15 text-white placeholder:text-white/25",
+    formFieldInputShowPasswordButton: "text-[#71717a] hover:text-white",
     formFieldErrorText: "text-[#f43f5e] text-[11px] mt-1",
 
-    formButtonPrimary: "h-12 rounded-xl text-sm font-semibold w-full",
+    formButtonPrimary: "h-12 rounded-xl text-sm font-semibold w-full mt-4",
 
-    footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] font-medium transition-colors",
-    footerActionText: "text-[#9a9a9a] text-[13px]",
-    footer: "bg-transparent mt-4 overflow-visible pb-2",
-    footerBranding: "mt-4 flex justify-center items-center overflow-visible pb-2",
+    footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] font-semibold transition-colors",
+    footerActionText: "text-[#71717a] text-sm",
+    footer: "bg-transparent mt-5 overflow-visible pb-2",
 
     alert: "rounded-xl border border-[#f43f5e]/20 bg-[#f43f5e]/8 text-[#f43f5e] text-sm p-3",
     alertText: "text-[#f43f5e] text-sm",
 
-    form: "gap-3.5",
+    form: "gap-4",
     otpCodeFieldInput: "bg-white/5 border-white/10 text-white rounded-xl",
   },
 };
@@ -425,15 +425,15 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
                   "0 0 0 1px rgba(255,255,255,0.03), 0 24px 56px rgba(0,0,0,0.65), 0 0 48px rgba(128,82,255,0.07)",
               }}
             >
-              {/* Our custom header — sits above Clerk component */}
-              <div className="mb-4">
-                <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-white">
-                  {mode === "sign-in" ? "Welcome back" : "Create your account"}
+              {/* Custom header — sits above Clerk component */}
+              <div className="mb-6 text-center">
+                <h2 className="text-[22px] font-bold tracking-tight text-white">
+                  {mode === "sign-in" ? "Sign in to EchoMind AI" : "Create your account"}
                 </h2>
-                <p className="mt-1.5 text-[13px] leading-relaxed" style={{ color: "#9a9a9a" }}>
+                <p className="mt-1.5 text-sm text-[#9a9a9a] leading-relaxed">
                   {mode === "sign-in"
-                    ? "Continue your journey with EchoMind."
-                    : "Start your mental wellness journey today."}
+                    ? "Welcome back! Please sign in to continue"
+                    : "Welcome! Please fill in the details to get started."}
                 </p>
               </div>
 
