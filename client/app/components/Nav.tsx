@@ -119,7 +119,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
 
       {/* Mobile top header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-violet-500/15 bg-black/95 backdrop-blur-lg">
-        <div className="flex items-center px-4 py-3">
+        <div className="flex items-center justify-between px-6 py-3">
           {/* Logo — left aligned */}
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-teal-500">
@@ -129,9 +129,6 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
               EchoMind
             </h3>
           </div>
-
-          {/* Spacer pushes UserButton to the far right */}
-          <div className="flex-1" />
 
           <SignedIn>
             <UserButton

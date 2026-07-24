@@ -396,7 +396,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
             className="relative w-full"
-            style={{ maxWidth: 440 }}
+            style={{ maxWidth: 400 }}
           >
             {/* Gradient border ring */}
             <div
@@ -415,9 +415,8 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
 
             {/* Card body */}
             <div
-              className="relative rounded-2xl"
+              className="relative rounded-2xl px-6 py-8 sm:px-8 sm:py-9"
               style={{
-                padding: "32px 32px 36px",
                 background: "rgba(9, 9, 16, 0.88)",
                 backdropFilter: "blur(28px)",
                 WebkitBackdropFilter: "blur(28px)",
@@ -427,7 +426,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
               }}
             >
               {/* Our custom header — sits above Clerk component */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-white">
                   {mode === "sign-in" ? "Welcome back" : "Create your account"}
                 </h2>

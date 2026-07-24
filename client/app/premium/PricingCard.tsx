@@ -122,7 +122,7 @@ export default function PricingCard({
 
       {/* Glassmorphism Inner Content Container */}
       <div 
-        className="relative z-10 w-full h-full rounded-[23px] bg-neutral-950/90 backdrop-blur-2xl flex flex-col p-8 md:p-10 justify-between overflow-hidden flex-grow border border-white/5"
+        className="relative z-10 w-full h-full rounded-[23px] bg-neutral-950/90 backdrop-blur-2xl flex flex-col p-6 sm:p-8 md:p-10 justify-between overflow-hidden flex-grow border border-white/5"
       >
         {/* Background blobs, grid & noise inside */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-[23px]">
@@ -265,7 +265,7 @@ export default function PricingCard({
         </div>
 
         {/* Upgrade Button or Current Plan Status */}
-        <div className="relative z-20">
+        <div className="relative z-20 mt-auto pt-4">
           {isCurrentPlan ? (
             <button
               disabled

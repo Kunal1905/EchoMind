@@ -99,7 +99,7 @@ export function SessionsContent({
             return (
               <div 
                 key={plan.name}
-                className={`w-full ${
+                className={`w-full h-full flex flex-col ${
                   index === 2 
                     ? "md:col-span-2 md:max-w-md md:mx-auto lg:col-span-1 lg:max-w-none" 
                     : ""
