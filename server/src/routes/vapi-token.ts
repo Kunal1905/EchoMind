@@ -2,6 +2,11 @@ import { Router } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { perUserLimit } from "../middleware/per-user-rate-limit";
+import {
+  killSwitchGuard,
+  callStartRateLimit,
+  dailyMinuteCapGuard,
+} from "../middleware/cost-guard";
 import { db } from "../config/db";
 import { dbPooled } from "../config/db-pooled";
 import { usersTable, sessionChatTable, moodEntriesTable } from "../config/schema";
@@ -103,6 +108,9 @@ async function getMemorySafe(userId: string): Promise<string> {
 
 router.post("/",
   requireUser,
+  killSwitchGuard,
+  callStartRateLimit,
+  dailyMinuteCapGuard,
   perUserLimit({ windowSec: 30, max: 2, key: "vapi-token" }),
   async (req: AuthedRequest, res) => {
     try {

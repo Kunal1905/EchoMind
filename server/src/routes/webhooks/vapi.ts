@@ -5,6 +5,7 @@ import { sessionChatTable } from "../../config/schema";
 import { eq, sql } from "drizzle-orm";
 import { getRedis } from "../../lib/redis";
 import { deductMinutesForDurationDelta } from "../../lib/minutes";
+import { recordCallUsage } from "../../middleware/cost-guard";
 
 const router = Router();
 
@@ -68,6 +69,10 @@ router.post("/", async (req, res) => {
     if (!userId) {
       console.warn("[vapi-webhook] No userId in call metadata — minutes NOT deducted. message keys:", Object.keys(body.message));
       return res.status(200).json({ received: true });
+    }
+
+    if (durationSec > 0) {
+      await recordCallUsage(userId, durationSec);
     }
 
     if (sessionId && durationSec > 0) {
