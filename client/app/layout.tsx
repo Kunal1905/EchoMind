@@ -21,7 +21,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-csp-nonce") || "";
 
   return (
-    <ClerkProvider nonce={nonce}>
+    <ClerkProvider
+      nonce={nonce}
+      appearance={{
+        variables: {
+          colorBackground: "#1e1e2e",
+          colorText: "#f5f5f5",
+          colorTextSecondary: "#a0a0b0",
+        },
+      }}
+    >
       <html lang="en" nonce={nonce}>
         <body className={`${inter.variable} antialiased`}>
           <PHProvider>

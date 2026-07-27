@@ -52,6 +52,15 @@
     --depth-2: rgba(15, 15, 25, 0.95);
     --depth-3: rgba(20, 20, 35, 0.98);
 
+    /* Shared auth/account surfaces */
+    --surface-auth-card: rgba(255, 255, 255, 0.035);
+    --surface-auth-panel: rgba(9, 9, 16, 0.88);
+    --surface-auth-popover: #1e1e2e;
+    --surface-auth-border: rgba(255, 255, 255, 0.08);
+    --surface-auth-border-strong: #3a3a4a;
+    --radius-auth-card: 12px;
+    --radius-auth-panel: 16px;
+
     /* Background */
     --bg-deep: var(--color-void);
     --bg-dark: var(--color-void);
@@ -130,6 +139,11 @@
       --glass-bg: rgba(250, 250, 250, 0.7);
       --glass-bg-strong: rgba(255, 255, 255, 0.85);
       --glass-border: rgba(139, 92, 246, 0.15);
+      --surface-auth-card: rgba(255, 255, 255, 0.82);
+      --surface-auth-panel: rgba(255, 255, 255, 0.92);
+      --surface-auth-popover: #ffffff;
+      --surface-auth-border: rgba(24, 24, 27, 0.1);
+      --surface-auth-border-strong: rgba(24, 24, 27, 0.16);
       --depth-1: rgba(255, 255, 255, 0.9);
       --depth-2: rgba(250, 250, 250, 0.95);
       --depth-3: rgba(245, 245, 245, 0.98);

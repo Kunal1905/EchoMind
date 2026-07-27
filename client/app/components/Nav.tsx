@@ -6,13 +6,107 @@ import {
   History,
   CreditCard,
   Settings,
+  LogOut,
+  UserCog,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useClerk, useUser } from "@clerk/nextjs";
+import Link from "next/link";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/app/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/app/components/ui/dropdown-menu";
 
 interface NavProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+}
+
+function AccountMenu() {
+  const { signOut, openUserProfile } = useClerk();
+  const { user } = useUser();
+
+  const name = user?.fullName || user?.firstName || "Account";
+  const email = user?.primaryEmailAddress?.emailAddress || "";
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-violet-400"
+          aria-label="Open account menu"
+        >
+          <Avatar className="h-[34px] w-[34px]">
+            <AvatarImage src={user?.imageUrl} alt={name} />
+            <AvatarFallback className="bg-gradient-to-br from-violet-600 to-teal-500 text-xs font-semibold text-white">
+              {initials || "EM"}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={10}
+        className="z-[100] w-[min(280px,calc(100vw-24px))] rounded-[var(--radius-auth-panel)] border border-[var(--surface-auth-border-strong)] bg-[var(--surface-auth-popover)] p-0 text-white shadow-2xl shadow-black/50"
+      >
+        <DropdownMenuLabel className="px-4 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user?.imageUrl} alt={name} />
+              <AvatarFallback className="bg-gradient-to-br from-violet-600 to-teal-500 text-xs font-semibold text-white">
+                {initials || "EM"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-snug text-white">
+                {name}
+              </p>
+              {email && (
+                <p className="truncate text-xs font-normal leading-relaxed text-[#a0a0b0]">
+                  {email}
+                </p>
+              )}
+            </div>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="mx-0 bg-white/10" />
+        <div className="p-2">
+          <DropdownMenuItem
+            className="cursor-pointer rounded-[10px] px-3 py-2.5 text-sm text-zinc-200 outline-none focus:bg-white/10 focus:text-white"
+            onSelect={() => openUserProfile()}
+          >
+            <UserCog size={16} />
+            Manage account
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer rounded-[10px] px-3 py-2.5 text-sm text-zinc-300 outline-none focus:bg-red-500/10 focus:text-red-200"
+            onSelect={() => {
+              void signOut({ redirectUrl: "/sign-in" });
+            }}
+          >
+            <LogOut size={16} />
+            Sign out
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function Nav({ currentPage, onNavigate }: NavProps) {
@@ -37,7 +131,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
                 <MessageCircle size={20} className="text-white" />
               </div>
               <h2 className="text-lg font-semibold tracking-[-0.02em] text-white">
-                EchoMind AI
+                EchoMind
               </h2>
             </motion.div>
 
@@ -70,18 +164,18 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
                 );
               })}
               <SignedIn>
-                <UserButton
-                  afterSignOutUrl="/sign-in"
-                  showName={false}
-                />
+                <div className="ml-auto flex items-center">
+                  <AccountMenu />
+                </div>
               </SignedIn>
 
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="rounded-full bg-gradient-to-r from-violet-600 to-teal-500 px-6 py-2 text-sm font-medium text-white">
-                    Sign in
-                  </button>
-                </SignInButton>
+                <Link
+                  href="/sign-in"
+                  className="rounded-full bg-gradient-to-r from-violet-600 to-teal-500 px-6 py-2 text-sm font-medium text-white"
+                >
+                  Sign in
+                </Link>
               </SignedOut>
             </div>
           </div>
@@ -119,9 +213,9 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
 
       {/* Mobile top header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-violet-500/15 bg-black/95 backdrop-blur-lg">
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center px-4 py-3">
           {/* Logo — left aligned */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-teal-500">
               <MessageCircle size={16} className="text-white" />
             </div>
@@ -131,18 +225,18 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
           </div>
 
           <SignedIn>
-            <UserButton
-              afterSignOutUrl="/sign-in"
-              showName={false}
-            />
+            <div className="ml-auto flex items-center">
+              <AccountMenu />
+            </div>
           </SignedIn>
 
           <SignedOut>
-            <SignInButton mode="modal">
-              <button className="rounded-full bg-gradient-to-r from-violet-600 to-teal-500 px-5 py-2 text-sm font-medium text-white">
-                Sign in
-              </button>
-            </SignInButton>
+            <Link
+              href="/sign-in"
+              className="ml-auto rounded-full bg-gradient-to-r from-violet-600 to-teal-500 px-5 py-2 text-sm font-medium text-white"
+            >
+              Sign in
+            </Link>
           </SignedOut>
         </div>
       </header>

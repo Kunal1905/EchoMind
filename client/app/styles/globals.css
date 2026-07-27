@@ -247,9 +247,9 @@ button {
 .cl-userButtonPopoverCard {
   width: min(280px, calc(100vw - 24px)) !important;
   max-width: 280px !important;
-  background: rgba(24, 24, 27, 0.85) !important; /* bg-zinc-900 with transparency */
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 16px !important;
+  background: var(--surface-auth-popover) !important;
+  border: 1px solid var(--surface-auth-border-strong) !important;
+  border-radius: var(--radius-auth-panel) !important;
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.2),
     0 10px 15px -3px rgba(0, 0, 0, 0.4),
@@ -318,7 +318,7 @@ button {
 
 /* ── Action buttons (Manage account / Sign out) ── */
 .cl-userButtonPopoverActions {
-  padding: 8px !important;
+  padding: 8px 8px 10px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important; /* Increased spacing between items */
@@ -377,19 +377,21 @@ button {
 /* ── Footer ── */
 .cl-userButtonPopoverFooter {
   display: flex !important;
+  position: relative !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 8px 16px !important;
+  margin-top: 2px !important;
+  padding: 9px 16px 10px !important;
   border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
   background: rgba(255, 255, 255, 0.02) !important;
-  min-height: 0 !important;
+  min-height: 36px !important;
   overflow: hidden !important;
-  max-height: 34px !important;
+  z-index: 0 !important;
 }
 .cl-userButtonPopoverFooter > * {
-  transform: scale(0.62) !important;
+  transform: scale(0.68) !important;
   transform-origin: center !important;
-  opacity: 0.4 !important;
+  opacity: 0.55 !important;
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;

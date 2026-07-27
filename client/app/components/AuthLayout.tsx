@@ -103,10 +103,10 @@ function FeatureCard({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay }}
-      className="flex items-start gap-3 rounded-xl p-4"
+      className="flex items-start gap-3 rounded-[var(--radius-auth-card)] p-4"
       style={{
-        background: "rgba(255,255,255,0.035)",
-        border: "1px solid rgba(255,255,255,0.07)",
+        background: "var(--surface-auth-card)",
+        border: "1px solid var(--surface-auth-border)",
       }}
     >
       <div
@@ -135,7 +135,7 @@ export const clerkAppearance = {
   },
   variables: {
     colorPrimary: "#8052ff",
-    colorBackground: "transparent",
+    colorBackground: "#1e1e2e",
     colorInputBackground: "rgba(255,255,255,0.04)",
     colorInputText: "#ffffff",
     colorText: "#ffffff",
@@ -210,6 +210,22 @@ const features = [
   },
 ];
 
+const ambientBlobs: Array<{
+  w: number;
+  h: number;
+  top: string;
+  left: string;
+  bottom?: string;
+  right?: string;
+  color: string;
+  dur: number;
+  delay: number;
+}> = [
+  { w: 480, h: 480, top: "-12%", left: "-10%", color: "rgba(128,82,255,0.16)", dur: 12, delay: 0 },
+  { w: 340, h: 340, top: "auto", left: "auto", bottom: "4%", right: "4%", color: "rgba(21,132,110,0.14)", dur: 15, delay: 3 },
+  { w: 260, h: 260, top: "52%", left: "12%", color: "rgba(255,184,41,0.09)", dur: 10, delay: 6 },
+];
+
 export default function AuthLayout({ children, mode }: AuthLayoutProps) {
   return (
     <div
@@ -244,11 +260,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
           />
 
           {/* Animated blobs */}
-          {[
-            { w: 480, h: 480, top: "-12%", left: "-10%", color: "rgba(128,82,255,0.16)", dur: 12, delay: 0 },
-            { w: 340, h: 340, top: "auto", left: "auto", bottom: "4%", right: "4%", color: "rgba(21,132,110,0.14)", dur: 15, delay: 3 },
-            { w: 260, h: 260, top: "52%", left: "12%", color: "rgba(255,184,41,0.09)", dur: 10, delay: 6 },
-          ].map((b, i) => (
+          {ambientBlobs.map((b, i) => (
             <motion.div
               key={i}
               className="pointer-events-none absolute rounded-full"
@@ -257,8 +269,8 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
                 height: b.h,
                 top: b.top,
                 left: b.left,
-                bottom: (b as any).bottom,
-                right: (b as any).right,
+                bottom: b.bottom,
+                right: b.right,
                 background: `radial-gradient(circle, ${b.color} 0%, transparent 70%)`,
                 filter: "blur(42px)",
               }}
@@ -271,7 +283,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
           <BrandingParticles />
 
           {/* Content — fixed padding, proper vertical rhythm */}
-          <div className="relative z-10 flex h-full flex-col px-12 py-12">
+          <div className="relative z-10 flex h-full flex-col px-14 py-14 xl:px-16">
             {/* Logo row */}
             <motion.div
               initial={{ opacity: 0, y: -14 }}
@@ -291,7 +303,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             </motion.div>
 
             {/* Centre block */}
-            <div className="flex flex-1 flex-col justify-center gap-8 py-10">
+            <div className="flex flex-1 flex-col justify-center gap-10 py-10">
               <motion.div
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -304,8 +316,8 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
                   Your AI Mental Wellness Companion
                 </p>
                 <h1
-                  className="text-[48px] xl:text-[56px] font-normal leading-[1.06] tracking-[-0.04em] text-white"
-                  style={{ maxWidth: 500 }}
+                  className="text-[52px] font-normal leading-[1.04] tracking-[-0.04em] text-white xl:text-[64px]"
+                  style={{ maxWidth: 620 }}
                 >
                   Give your mind
                   <br />a place to{" "}
@@ -320,8 +332,8 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
                   </span>
                 </h1>
                 <p
-                  className="mt-5 text-[15px] font-light leading-relaxed"
-                  style={{ color: "#9a9a9a", maxWidth: 400 }}
+                  className="mt-6 text-[17px] font-light leading-relaxed"
+                  style={{ color: "#9a9a9a", maxWidth: 500 }}
                 >
                   Journal your thoughts, analyze your emotions, and track your
                   mental wellness with AI-powered insights — privately and securely.
@@ -329,7 +341,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
               </motion.div>
 
               {/* Feature cards */}
-              <div className="flex flex-col gap-2.5" style={{ maxWidth: 460 }}>
+              <div className="flex flex-col gap-3" style={{ maxWidth: 520 }}>
                 {features.map((f, i) => (
                   <FeatureCard
                     key={f.title}
@@ -358,7 +370,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
         {/* ═══════════════════════════════════════════════════════════════
             RIGHT — AUTH PANEL  (40% desktop, full-width mobile)
         ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative flex flex-1 flex-col items-center justify-center px-5 py-10 lg:px-10">
+        <div className="relative flex flex-1 flex-col items-center justify-center px-5 py-10 lg:px-10 xl:px-14">
           {/* Glow behind card */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -396,7 +408,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
             className="relative w-full"
-            style={{ maxWidth: 400 }}
+            style={{ maxWidth: 450 }}
           >
             {/* Gradient border ring */}
             <div
@@ -417,7 +429,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             <div
               className="relative rounded-2xl px-6 py-8 sm:px-8 sm:py-9"
               style={{
-                background: "rgba(9, 9, 16, 0.88)",
+                background: "var(--surface-auth-panel)",
                 backdropFilter: "blur(28px)",
                 WebkitBackdropFilter: "blur(28px)",
                 border: "1px solid rgba(128,82,255,0.15)",
@@ -428,7 +440,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
               {/* Custom header — sits above Clerk component */}
               <div className="mb-6 text-center">
                 <h2 className="text-[22px] font-bold tracking-tight text-white">
-                  {mode === "sign-in" ? "Sign in to EchoMind AI" : "Create your account"}
+                  {mode === "sign-in" ? "Sign in to EchoMind" : "Create your account"}
                 </h2>
                 <p className="mt-1.5 text-sm text-[#9a9a9a] leading-relaxed">
                   {mode === "sign-in"

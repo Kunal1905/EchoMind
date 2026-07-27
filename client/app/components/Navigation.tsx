@@ -22,7 +22,7 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-teal-400 pulse-orb"></div>
             <h3 className="bg-gradient-to-r from-violet-400 to-teal-300 bg-clip-text text-transparent">
-              EchoMind AI
+              EchoMind
             </h3>
           </div>
           <div className="flex gap-2">
