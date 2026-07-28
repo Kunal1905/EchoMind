@@ -23,7 +23,66 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   isLive?: boolean;
+  isSystemFallback?: boolean;
 }
+
+type VoiceRecoveryNotice = {
+  title: string;
+  message: string;
+};
+
+type VapiTranscriptMessage = {
+  type?: string;
+  role?: string;
+  transcriptType?: string;
+  transcript?: string;
+};
+
+type VapiErrorLike = {
+  message?: unknown;
+  status?: unknown;
+  response?: unknown;
+  type?: unknown;
+  error?: unknown;
+};
+
+type NoMinutesData = {
+  minutesRemaining?: number;
+  freeTrialLimit?: number;
+  freeTrialUsed?: number;
+};
+
+type ApiErrorLike = {
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      error?: string;
+      code?: string;
+      freeTrialUsed?: number;
+      minutesRemaining?: number;
+      freeTrialLimit?: number;
+    };
+  };
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === "string") return error;
+  if (!error || typeof error !== "object") return String(error);
+
+  const candidate = error as VapiErrorLike;
+  if (typeof candidate.message === "string") return candidate.message;
+
+  if (typeof candidate.error === "string") return candidate.error;
+  if (candidate.error && typeof candidate.error === "object") {
+    const nested = candidate.error as { message?: unknown; error?: unknown };
+    if (typeof nested.message === "string") return nested.message;
+    if (typeof nested.error === "string") return nested.error;
+    if (nested.message) return JSON.stringify(nested.message);
+  }
+
+  return JSON.stringify(error);
+};
 
 export function ChatContent({
   onNavigate = () => { },
@@ -57,6 +116,8 @@ export function ChatContent({
     title: string;
     message: string;
   } | null>(null);
+  const [voiceRecoveryNotice, setVoiceRecoveryNotice] =
+    useState<VoiceRecoveryNotice | null>(null);
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
@@ -94,8 +155,8 @@ export function ChatContent({
   const sessionIdRef = useRef<string | null>(null);
   const saveAttemptedRef = useRef(false);
   const callStartRef = useRef<number | null>(null); // ✅ live call-start timestamp (avoids stale state in the once-registered listener)
-
-  const API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY!;
+  const isRecordingRef = useRef(false);
+  const lastRecoveryNoticeRef = useRef(0);
 
   // Load consent preference from localStorage on mount
   useEffect(() => {
@@ -113,6 +174,10 @@ export function ChatContent({
     }
   }, []);
 
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+
   /* ---------------- VAPI EVENTS ---------------- */
   useEffect(() => {
     const vapi = vapiRef.current;
@@ -125,6 +190,7 @@ export function ChatContent({
       setIsRecording(true);
       setIsInitializing(false);
       setIsWaitingForAssistant(true);
+      setVoiceRecoveryNotice(null);
 
       // Track Session Started in PostHog
       posthog.capture("session_started", {
@@ -221,13 +287,15 @@ export function ChatContent({
       await saveEndedSession({ source: "onCallEnd" });
     };
 
-    const onMessage = (msg: any) => {
+    const onMessage = (msg: VapiTranscriptMessage) => {
       if (msg?.type !== "transcript") return;
 
       const sender: "user" | "ai" = msg.role === "assistant" ? "ai" : "user";
       const isFinal = msg.transcriptType === "final";
+      const transcript = msg.transcript || "";
 
       setIsWaitingForAssistant(false);
+      setVoiceRecoveryNotice(null);
 
       setMessages((prev) => {
         const last = prev[prev.length - 1];
@@ -235,7 +303,7 @@ export function ChatContent({
           const copy = [...prev];
           copy[copy.length - 1] = {
             ...last,
-            text: msg.transcript,
+            text: transcript,
             isLive: !isFinal,
           };
           messagesRef.current = copy;
@@ -244,7 +312,7 @@ export function ChatContent({
 
         const newMessage: Message = {
           id: `${sender}-${Date.now()}`,
-          text: msg.transcript,
+          text: transcript,
           sender,
           timestamp: new Date(),
           isLive: !isFinal,
@@ -256,9 +324,45 @@ export function ChatContent({
       });
     };
 
-    const onError = async (error: any) => {
+    const showSoftVoiceRecovery = (technicalMessage: string) => {
+      const now = Date.now();
+      const hasRecentFallback = now - lastRecoveryNoticeRef.current < 12000;
+      const fallbackText = "I lost you for a second, but I am still here. Go ahead when you are ready.";
+
+      lastRecoveryNoticeRef.current = now;
+      setIsInitializing(false);
+      setIsSaving(false);
+      setIsWaitingForAssistant(false);
+      setVoiceRecoveryNotice({
+        title: "Small connection hiccup",
+        message: fallbackText,
+      });
+
+      if (!hasRecentFallback) {
+        setMessages((prev) => {
+          const fallbackMessage: Message = {
+            id: `voice-recovery-${now}`,
+            text: fallbackText,
+            sender: "ai",
+            timestamp: new Date(),
+            isSystemFallback: true,
+          };
+          const updated = [...prev, fallbackMessage];
+          messagesRef.current = updated;
+          return updated;
+        });
+      }
+
+      posthog.capture("voice_session_soft_recovery_shown", {
+        plan: isPremium ? "premium" : "free",
+        technicalMessage: technicalMessage.slice(0, 240),
+      });
+    };
+
+    const onError = async (error: unknown) => {
       console.error("VAPI Error:", error);
       console.error("FULL ERROR", error);
+      const errorDetails = (error && typeof error === "object" ? error : {}) as VapiErrorLike;
       let serializedError = "";
       try {
         serializedError = JSON.stringify(error) || "";
@@ -267,59 +371,23 @@ export function ChatContent({
         serializedError = String(error);
         console.error("JSON", serializedError);
       }
-      console.error("message", error?.message);
-      console.error("status", error?.status);
-      console.error("response", error?.response);
-      // Clear all loading states on error
-      setIsInitializing(false);
-      setIsSaving(false);
-      // If we were recording, stop recording
-      if (isRecording) {
-        setIsRecording(false);
-        setIsWaitingForAssistant(false);
-      }
+      console.error("message", errorDetails.message);
+      console.error("status", errorDetails.status);
+      console.error("response", errorDetails.response);
+      const errorMessage = getErrorMessage(error);
 
-      // Extract error message safely - handle different possible error structures
-      let errorMessage = "An unexpected error occurred";
-
-      if (typeof error === 'object' && error !== null) {
-        // Check different possible error object structures
-        if (error.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        } else if (error.error && typeof error.error === 'object') {
-          // Handle when error.error is an object
-          if (error.error.message && typeof error.error.message === 'string') {
-            errorMessage = error.error.message;
-          } else if (error.error.error && typeof error.error.error === 'string') {
-            errorMessage = error.error.error;
-          } else if (typeof error.error === 'string') {
-            errorMessage = error.error;
-          } else if (error.error && typeof error.error === 'object' && error.error.message) {
-            // If error.message is an object, try to convert it to string
-            errorMessage = typeof error.error.message === 'object'
-              ? JSON.stringify(error.error.message)
-              : String(error.error.message);
-          }
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        } else {
-          // If error object doesn't have expected properties, try to stringify it
-          errorMessage = JSON.stringify(error);
-        }
-      }
-
-      // Ensure errorMessage is a string before calling toLowerCase
-      if (typeof errorMessage !== 'string') {
-        errorMessage = String(errorMessage);
-      }
+      const lowerErrorMessage = errorMessage.toLowerCase();
+      const lowerSerializedError = serializedError.toLowerCase();
 
       const isMeetingEnded =
-        error?.type === "ejected" ||
-        serializedError.toLowerCase().includes('"type":"ejected"') ||
-        serializedError.toLowerCase().includes("meeting has ended") ||
-        errorMessage.toLowerCase().includes("meeting has ended");
+        errorDetails.type === "ejected" ||
+        lowerSerializedError.includes('"type":"ejected"') ||
+        lowerSerializedError.includes("meeting has ended") ||
+        lowerErrorMessage.includes("meeting has ended");
 
       if (isMeetingEnded) {
+        setIsRecording(false);
+        setIsWaitingForAssistant(false);
         await saveEndedSession({
           source: "vapi-ejected",
           softNotice: {
@@ -332,19 +400,53 @@ export function ChatContent({
         return;
       }
 
+      const isActiveSession = isRecordingRef.current || !!callStartRef.current;
+      const isLikelyProviderHiccup =
+        lowerSerializedError.includes("openai") ||
+        lowerSerializedError.includes("elevenlabs") ||
+        lowerSerializedError.includes("vapi") ||
+        lowerSerializedError.includes("deepgram") ||
+        lowerSerializedError.includes("websocket") ||
+        lowerSerializedError.includes("network") ||
+        lowerSerializedError.includes("connection") ||
+        lowerSerializedError.includes("timeout") ||
+        lowerSerializedError.includes("temporarily") ||
+        lowerErrorMessage.includes("openai") ||
+        lowerErrorMessage.includes("elevenlabs") ||
+        lowerErrorMessage.includes("vapi") ||
+        lowerErrorMessage.includes("deepgram") ||
+        lowerErrorMessage.includes("websocket") ||
+        lowerErrorMessage.includes("network") ||
+        lowerErrorMessage.includes("connection") ||
+        lowerErrorMessage.includes("timeout") ||
+        lowerErrorMessage.includes("temporarily");
+
+      if (isActiveSession && isLikelyProviderHiccup) {
+        console.warn("[vapi] Soft recovery shown instead of raw error:", errorMessage);
+        showSoftVoiceRecovery(errorMessage);
+        return;
+      }
+
+      setIsInitializing(false);
+      setIsSaving(false);
+      setIsWaitingForAssistant(false);
+
       // Provide more user-friendly error messages based on the error content
-      if (errorMessage.toLowerCase().includes("assistant not found")) {
+      if (lowerErrorMessage.includes("assistant not found")) {
         console.error("Assistant configuration error. Please verify your assistant ID is correct and properly configured in the VAPI dashboard.");
         alert("Assistant configuration error. Please contact support to resolve this issue.");
-      } else if (errorMessage.toLowerCase().includes("400")) {
+      } else if (lowerErrorMessage.includes("400")) {
         console.error("Bad request error. This may be due to an invalid assistant configuration.", errorMessage);
         alert("Configuration error (Vapi 400): " + errorMessage.slice(0, 400) + "\n\nOpen the browser console and share the 'FULL ERROR' / 'JSON' Vapi logs for the exact rejected field.");
-      } else if (errorMessage.toLowerCase().includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
+      } else if (lowerErrorMessage.includes("401") || lowerErrorMessage.includes("unauthorized")) {
         console.error("Authentication error. Please verify your API key is correct and has proper permissions.");
         alert("Authentication error. Please verify your API key is correct.");
-      } else if (errorMessage.toLowerCase().includes("403")) {
+      } else if (lowerErrorMessage.includes("403")) {
         console.error("Access forbidden. Please check your VAPI account permissions.");
         alert("Access error. Please check your account permissions.");
+      } else if (isActiveSession) {
+        console.warn("[vapi] Unclassified active-session error shown softly:", errorMessage);
+        showSoftVoiceRecovery(errorMessage);
       } else {
         console.error("An unexpected error occurred:", errorMessage);
         alert(`An error occurred: ${errorMessage}`);
@@ -406,13 +508,14 @@ export function ChatContent({
     if (isRecording || isInitializing) return;
     setIsInitializing(true);
     setSessionNotice(null);
+    setVoiceRecoveryNotice(null);
     setMessages([]);
     messagesRef.current = [];
     setSessionTime(0);
     saveAttemptedRef.current = false;
     callStartRef.current = null;
 
-    const showNoMinutesNotice = (data?: any) => {
+    const showNoMinutesNotice = (data?: NoMinutesData) => {
       const minutesRemaining = data?.minutesRemaining ?? premiumCalls;
       const latestFreeTrialLimit = data?.freeTrialLimit ?? freeTrialLimit;
       const latestFreeTrialUsed = data?.freeTrialUsed ??
@@ -466,12 +569,13 @@ export function ChatContent({
       vapi.start(assistantId, assistantOverrides);
 
       // client/app/echo/[sessionId]/ChatContent.tsx — replace the catch block in startVoiceSession:
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = err as ApiErrorLike;
       setIsInitializing(false);
 
       // No response at all = network/CORS failure, not a server error
-      if (!err.response) {
-        console.error("[startVoiceSession] Network/CORS error:", err.message);
+      if (!apiError.response) {
+        console.error("[startVoiceSession] Network/CORS error:", apiError.message);
         alert(
           "Couldn't reach the server. This usually means one of:\n" +
           "• The server is still starting up (free hosting spins down when idle — wait ~30s and retry)\n" +
@@ -482,14 +586,14 @@ export function ChatContent({
         return;
       }
 
-      const status = err.response.status;
+      const status = apiError.response.status;
 
       if (status === 402) {
         posthog.capture("minutes_exhausted", {
           plan: isPremium ? "premium" : "free",
-          minutesUsed: err.response.data?.freeTrialUsed ?? freeTrialUsed,
+          minutesUsed: apiError.response.data?.freeTrialUsed ?? freeTrialUsed,
         });
-        showNoMinutesNotice(err.response.data);
+        showNoMinutesNotice(apiError.response.data);
         return;
       }
 
@@ -504,15 +608,15 @@ export function ChatContent({
       }
 
       if (status === 500 || status === 503) {
-        const serverError = err.response.data?.error || "The server could not prepare the call.";
-        const serverCode = err.response.data?.code;
-        console.error("[startVoiceSession] Server error:", status, err.response.data);
+        const serverError = apiError.response.data?.error || "The server could not prepare the call.";
+        const serverCode = apiError.response.data?.code;
+        console.error("[startVoiceSession] Server error:", status, apiError.response.data);
         alert(serverCode ? `${serverError}\n\nCode: ${serverCode}` : serverError);
         return;
       }
 
       // Genuine server error — log full details for debugging, show generic message to user
-      console.error("[startVoiceSession] Server error:", status, err.response.data);
+      console.error("[startVoiceSession] Server error:", status, apiError.response.data);
       alert("Something went wrong starting your session. Please try again in a moment.");
     }
   };
@@ -563,6 +667,27 @@ export function ChatContent({
                   >
                     <CreditCard size={16} />
                     View plans
+                  </button>
+                </div>
+              </div>
+            )}
+            {voiceRecoveryNotice && (
+              <div className="mb-4 border-t border-b border-violet-400/25 py-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-violet-100">
+                      {voiceRecoveryNotice.title}
+                    </p>
+                    <p className="mt-1 text-sm text-violet-100/75">
+                      {voiceRecoveryNotice.message}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVoiceRecoveryNotice(null)}
+                    className="self-start rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white sm:self-auto"
+                  >
+                    Dismiss
                   </button>
                 </div>
               </div>
@@ -650,6 +775,8 @@ export function ChatContent({
                           <div
                             className={`max-w-[85%] px-4 py-3 rounded-2xl border ${msg.sender === "user"
                               ? "border-[--color-electric-iris] bg-[--color-electric-iris] text-white rounded-br-none"
+                              : msg.isSystemFallback
+                              ? "border-violet-400/30 bg-violet-500/10 text-violet-100 rounded-bl-none"
                               : "border-white/15 bg-transparent text-[--color-silver-mist] rounded-bl-none"
                               }`}
                           >
