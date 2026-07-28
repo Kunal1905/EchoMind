@@ -47,40 +47,53 @@ export function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProps) {
             </div>
 
             {/* Title */}
-            <h3 id="disclaimer-title" className="void-subheading mb-4 text-center">
-              Important Notice
+            <h3 id="disclaimer-title" className="void-subheading mb-3 text-center">
+              Important Safety Notice
             </h3>
 
             {/* Content */}
             <div id="disclaimer-description" className="space-y-4 text-sm text-gray-300">
-              <p>
-                EchoMind AI provides <strong className="text-white">supportive conversations</strong> but is <strong className="text-amber-400">not a substitute for professional medical or mental health care</strong>.
+              <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3.5 text-xs text-amber-100 leading-relaxed">
+                <strong className="text-amber-200 block mb-1">EchoMind is not a therapy or medical service.</strong>
+                EchoMind is an AI wellness companion for supportive reflection. It is <strong className="text-white">not a licensed therapist, psychiatrist, or medical professional</strong> and cannot diagnose or treat any health condition.
+              </div>
+
+              <p className="text-xs text-gray-300">
+                If you are experiencing severe distress, crisis, or thoughts of self-harm, please reach out immediately to professional crisis support:
               </p>
 
-              <p>
-                If you&apos;re experiencing a mental health crisis, please contact:
-              </p>
-
-              <div className="border-t border-b void-hairline py-4 space-y-2">
+              <div className="border-t border-b void-hairline py-3 space-y-2.5">
                 <div className="flex items-center gap-3">
-                  <Phone className="text-[--color-electric-iris]" size={18} />
+                  <Phone className="text-[--color-saffron-spark] shrink-0" size={18} />
                   <div>
-                    <div className="text-white">India Mental Health Helpline</div>
+                    <div className="text-white text-xs font-semibold">KIRAN (Govt 24/7 Toll-Free)</div>
                     <a 
-                      href="tel:08046110007" 
-                      className="text-[--color-saffron-spark] hover:text-white transition-colors"
+                      href="tel:18005990019" 
+                      className="text-[--color-saffron-spark] text-xs font-mono font-bold hover:text-white transition-colors"
                     >
-                      080-46110007
+                      1800-599-0019
                     </a>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Phone className="text-[--color-electric-iris]" size={18} />
+                  <Phone className="text-[--color-electric-iris] shrink-0" size={18} />
                   <div>
-                    <div className="text-white">Vandrevala Foundation (24/7)</div>
+                    <div className="text-white text-xs font-semibold">iCall Mental Health Helpline</div>
+                    <a 
+                      href="tel:9152987821" 
+                      className="text-[--color-electric-iris] text-xs font-mono font-bold hover:text-white transition-colors"
+                    >
+                      9152987821
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Phone className="text-[--color-electric-iris] shrink-0" size={18} />
+                  <div>
+                    <div className="text-white text-xs font-semibold">Vandrevala Foundation (24/7)</div>
                     <a 
                       href="tel:18602662345" 
-                      className="text-[--color-saffron-spark] hover:text-white transition-colors"
+                      className="text-gray-300 text-xs font-mono hover:text-white transition-colors"
                     >
                       1860-2662-345
                     </a>
@@ -88,19 +101,24 @@ export function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProps) {
                 </div>
               </div>
 
-              <p className="text-xs text-gray-400">
-                EchoMind AI is not intended for collecting personally identifiable information (PII) or securing sensitive data. Use discretion when sharing personal details.
+              <p className="text-[11px] text-gray-400 leading-normal">
+                By continuing, you acknowledge that EchoMind is an AI companion for personal wellness reflection and not a substitute for clinical care.
               </p>
             </div>
 
             {/* Accept button */}
             <motion.button
-              onClick={onClose}
-              className="void-pill mt-6 w-full"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("echomind_disclaimer_accepted", "true");
+                }
+                onClose();
+              }}
+              className="void-pill mt-5 w-full font-semibold"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              I Understand
+              I Understand & Agree
             </motion.button>
           </motion.div>
         </>

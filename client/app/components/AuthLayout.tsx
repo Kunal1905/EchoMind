@@ -451,6 +451,32 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
 
               {/* Clerk component */}
               {children}
+
+              {/* Sign-Up Agreement & Age Gate (Sign-up only) */}
+              {mode === "sign-up" && (
+                <div className="mt-5 border-t border-white/10 pt-4 text-xs text-[#9a9a9a]">
+                  <p className="leading-relaxed text-[#71717a] text-[11px] text-center">
+                    By signing up, you confirm that you are <strong className="text-white font-medium">18 years of age or older</strong> and agree to our{" "}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#8052ff] underline font-medium hover:text-[#a78bfa] transition-colors"
+                    >
+                      Terms of Service
+                    </a>{" "}
+                    and{" "}
+                    <a
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#8052ff] underline font-medium hover:text-[#a78bfa] transition-colors"
+                    >
+                      Privacy Policy
+                    </a>.
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
 
