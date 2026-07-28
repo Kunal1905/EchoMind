@@ -21,6 +21,7 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import api from "../lib/api";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
+import { EchoOrb } from "../components/EchoOrb";
 
 interface AccountInfo {
   plan: string;
@@ -214,8 +215,15 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
     }
   };
 
-  if (!isLoaded) {
-    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading...</div>;
+  if (!isLoaded || loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-4">
+        <EchoOrb size="md" isPulsing={true} />
+        <p className="text-[--color-silver-mist] text-sm animate-pulse font-medium">
+          Echo is loading your privacy & data settings...
+        </p>
+      </div>
+    );
   }
 
   if (!isSignedIn) {

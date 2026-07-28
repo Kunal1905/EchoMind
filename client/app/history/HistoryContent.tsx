@@ -9,6 +9,7 @@ import api from "../lib/api";
 import { MoodChart } from "../components/MoodChart";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
+import { EchoOrb } from "../components/EchoOrb";
 
 
 interface Session {
@@ -98,55 +99,28 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
       }
 
       // If we have cached data, update states immediately so the page is instant
-      if (hasLoadedOnce) {
-        setSessions(cachedSessions || []);
-        setMoodEntries(cachedMoodEntries || []);
+      if (cachedSessions && cachedMoodEntries && !hasLoadedOnce) {
+        setSessions(cachedSessions);
+        setMoodEntries(cachedMoodEntries);
         setLoading(false);
-      } else {
-        setLoading(true);
       }
 
-      setError(null);
-
-      // Fetch fresh data in the background (stale-while-revalidate)
-      const [sessionsResult, moodResult] = await Promise.allSettled([
-        api.get("/history"),
-        api.get("/mood"),
-      ]);
-
-      // Sessions
-      if (sessionsResult.status === "fulfilled") {
-        const sessionsData = Array.isArray(sessionsResult.value.data) ? sessionsResult.value.data : [];
-        const map = new Map<string, Session>();
-        for (const s of sessionsData as Session[]) map.set(s.sessionId, s);
-        const array = Array.from(map.values()).sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setSessions(array);
-        cachedSessions = array;
-      } else {
-        const err: any = sessionsResult.reason;
-        console.error("Error fetching sessions:", err);
-
-        // Only show error page if we don't have any cached data to show
-        if (!hasLoadedOnce) {
-          if (!err.response) {
-            setError("Couldn't reach the server. Please check your connection and try again.");
-          } else if (err.response.status === 401) {
-            setError("Your session expired. Please refresh the page.");
-          } else {
-            setError("Something went wrong loading your history. Please try again.");
-          }
+      try {
+        const [resSessions, resMood] = await Promise.all([
+          api.get("/session-chat"),
+          api.get("/mood"),
+        ]);
+        if (resSessions.status === 200) {
+          setSessions(resSessions.data);
+          cachedSessions = resSessions.data;
         }
-      }
-
-      // Mood
-      if (moodResult.status === "fulfilled") {
-        const moodData = Array.isArray(moodResult.value.data) ? moodResult.value.data : [];
-        setMoodEntries(moodData);
-        cachedMoodEntries = moodData;
-      } else {
-        console.warn("Mood data unavailable (non-critical):", moodResult.reason);
+        if (resMood.status === 200) {
+          setMoodEntries(resMood.data);
+          cachedMoodEntries = resMood.data;
+        }
+      } catch (err) {
+        console.error("Error fetching history or mood entries:", err);
+        setError("Failed to fetch session history. Please try again.");
         if (!hasLoadedOnce) {
           setMoodEntries([]);
           cachedMoodEntries = [];
@@ -159,7 +133,14 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
     fetchData();
   }, [isLoaded, isSignedIn, user?.id]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-black">Loading...</div>;
+  if (!isLoaded) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-black gap-4 text-white">
+      <EchoOrb size="md" isPulsing={true} />
+      <p className="text-[--color-silver-mist] text-sm animate-pulse font-medium">
+        Echo is preparing your session space...
+      </p>
+    </div>
+  );
   if (!isSignedIn) return (
     <div className="void-page flex h-screen items-center justify-center px-4">
       <ConstellationField density="ambient" className="opacity-50" />
@@ -172,7 +153,14 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
       </div>
     </div>
   );
-  if (loading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[--color-electric-iris]" size={48} /></div>;
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-black gap-4 text-white">
+      <EchoOrb size="md" isPulsing={true} />
+      <p className="text-[--color-silver-mist] text-sm animate-pulse font-medium">
+        Echo is gathering your session reflections...
+      </p>
+    </div>
+  );
   if (error) return (
     <div className="p-8 text-red-400 bg-black min-h-screen flex items-center justify-center">
       <div className="max-w-2xl text-center">

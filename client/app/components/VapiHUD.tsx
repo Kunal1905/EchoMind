@@ -133,20 +133,20 @@ export function VapiHUD({
           {/* Status indicator */}
           {(isRecording || isInitializing || isSaving) && (
             <motion.div
-              className="flex items-center gap-2 text-sm text-red-400"
-              animate={prefersReduced ? {} : { opacity: [1, 0.5, 1] }}
+              className="flex items-center gap-2 text-sm text-[--color-electric-iris]"
+              animate={prefersReduced ? {} : { opacity: [1, 0.6, 1] }}
               transition={prefersReduced ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
             >
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>
+              <div className="w-2 h-2 rounded-full bg-[--color-electric-iris] animate-pulse" />
+              <span className="font-medium">
                 {isSaving
-                  ? "Saving session..."
+                  ? "Echo is preserving your session reflections..."
                   : isInitializing
-                  ? "Initializing..."
+                  ? "Echo is tuning in to your session..."
                   : isWaitingForAssistant 
-                  ? "Waiting for assistant..." 
+                  ? "Echo is listening & reflecting..." 
                   : isRecording 
-                  ? "Recording - Click to end" 
+                  ? "Echo is listening — Click to end session" 
                   : ""}
               </span>
             </motion.div>

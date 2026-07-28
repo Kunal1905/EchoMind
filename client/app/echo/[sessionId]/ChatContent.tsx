@@ -791,8 +791,8 @@ export function ChatContent({
                     )}
                     <p className="text-[--color-silver-mist] animate-pulse text-lg">
                       {isRecording
-                        ? "Waiting for assistant to respond..."
-                        : "Press the mic to start your session."}
+                        ? "Echo is listening & reflecting..."
+                        : "Press the mic when you're ready to share with Echo."}
                     </p>
                     <p className="text-[--color-ash-gray] text-sm max-w-md">
                       Share your thoughts and feelings freely. I&apos;m here to
@@ -841,7 +841,7 @@ export function ChatContent({
               >
                 <div className="flex items-center justify-center gap-2 border-t void-hairline py-4">
                   <Loader2 className="animate-spin text-[--color-electric-iris]" size={20} />
-                  <span className="text-[--color-silver-mist]">Starting session...</span>
+                  <span className="text-[--color-silver-mist] font-medium">Echo is tuning in and preparing your session...</span>
                 </div>
               </motion.div>
             )}
@@ -858,7 +858,7 @@ export function ChatContent({
               >
                 <div className="flex items-center justify-center gap-2 border-t void-hairline py-4">
                   <Loader2 className="animate-spin text-[--color-electric-iris]" size={20} />
-                  <span className="text-[--color-silver-mist]">Saving session...</span>
+                  <span className="text-[--color-silver-mist] font-medium">Echo is preserving your session reflections...</span>
                 </div>
               </motion.div>
             )}
