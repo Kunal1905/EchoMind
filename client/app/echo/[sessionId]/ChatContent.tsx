@@ -112,6 +112,9 @@ export function ChatContent({
   const [isWaitingForAssistant, setIsWaitingForAssistant] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
+  const [maxSessionSeconds, setMaxSessionSeconds] = useState<number | null>(null);
+  const [oneMinuteWarningShown, setOneMinuteWarningShown] = useState(false);
+  const warningTriggeredRef = useRef(false);
   const [sessionNotice, setSessionNotice] = useState<{
     title: string;
     message: string;
@@ -468,10 +471,26 @@ export function ChatContent({
 
   /* ---------------- TIMER ---------------- */
   useEffect(() => {
-    if (!isRecording) return;
-    const t = setInterval(() => setSessionTime((s) => s + 1), 1000);
+    if (!isRecording) {
+      setOneMinuteWarningShown(false);
+      warningTriggeredRef.current = false;
+      return;
+    }
+    const t = setInterval(() => {
+      setSessionTime((s) => {
+        const nextTime = s + 1;
+        if (maxSessionSeconds && maxSessionSeconds > 60) {
+          const remaining = maxSessionSeconds - nextTime;
+          if (remaining <= 60 && !warningTriggeredRef.current) {
+            warningTriggeredRef.current = true;
+            setOneMinuteWarningShown(true);
+          }
+        }
+        return nextTime;
+      });
+    }, 1000);
     return () => clearInterval(t);
-  }, [isRecording]);
+  }, [isRecording, maxSessionSeconds]);
 
   /* ---------------- AUTOSCROLL (CHAT ONLY) ---------------- */
   useEffect(() => {
@@ -512,6 +531,8 @@ export function ChatContent({
     setMessages([]);
     messagesRef.current = [];
     setSessionTime(0);
+    setOneMinuteWarningShown(false);
+    warningTriggeredRef.current = false;
     saveAttemptedRef.current = false;
     callStartRef.current = null;
 
@@ -550,6 +571,10 @@ export function ChatContent({
       }
 
       const { assistantId, assistantOverrides, sessionId: serverSessionId } = tokenRes.data;
+
+      // Store the max duration for 1-minute warning calculation
+      const maxSec = assistantOverrides?.maxDurationSeconds || (premiumCalls * 60);
+      setMaxSessionSeconds(maxSec);
 
       // Store the session ID from the server (has userId in metadata)
       sessionIdRef.current = serverSessionId;
@@ -689,6 +714,19 @@ export function ChatContent({
                   >
                     Dismiss
                   </button>
+                </div>
+              </div>
+            )}
+            {oneMinuteWarningShown && (
+              <div className="mb-4 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-amber-100 flex items-center justify-between gap-3 shadow-lg backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <Clock className="text-amber-300 animate-pulse shrink-0" size={20} />
+                  <div>
+                    <p className="font-semibold text-amber-200 text-sm">About 1 minute remaining</p>
+                    <p className="text-xs text-amber-100/80 mt-0.5">
+                      Echo is gently wrapping up this session with a spoken heads-up so your conversation finishes peacefully.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
