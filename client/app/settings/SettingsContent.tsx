@@ -22,6 +22,7 @@ import api from "../lib/api";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
 import { EchoOrb } from "../components/EchoOrb";
+import { Switch } from "../components/ui/switch";
 
 interface AccountInfo {
   plan: string;
@@ -128,11 +129,11 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
     }
   }, [isLoaded, isSignedIn, user?.id, fetchData]);
 
-  const handleToggleConsent = async () => {
+  const handleToggleConsent = async (granted?: boolean) => {
     if (!data || savingConsent) return;
     setSavingConsent(true);
     setSuccessMessage(null);
-    const newConsentVal = !data.account.memoryConsent;
+    const newConsentVal = granted ?? !data.account.memoryConsent;
 
     try {
       const token = await getToken();
@@ -340,24 +341,38 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
                   </p>
                 </div>
 
-                <button
-                  onClick={handleToggleConsent}
-                  disabled={savingConsent}
-                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    data.account.memoryConsent ? "bg-[--color-electric-iris]" : "bg-zinc-800"
-                  }`}
-                  aria-label="Toggle Memory Consent"
-                >
-                  {savingConsent ? (
-                    <Loader2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" size={14} />
-                  ) : (
-                    <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        data.account.memoryConsent ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  )}
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span
+                    className={`inline-flex min-w-[5.5rem] items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                      data.account.memoryConsent
+                        ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40"
+                        : "bg-zinc-800/80 text-zinc-400 ring-1 ring-zinc-600/60"
+                    }`}
+                    aria-live="polite"
+                  >
+                    {savingConsent ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : data.account.memoryConsent ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        On
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff size={14} />
+                        Off
+                      </>
+                    )}
+                  </span>
+
+                  <Switch
+                    checked={data.account.memoryConsent}
+                    onCheckedChange={(checked) => void handleToggleConsent(checked)}
+                    disabled={savingConsent}
+                    aria-label="Toggle personalized AI memory consent"
+                    className="h-8 w-14 border border-white/10 data-[state=checked]:bg-violet-600 data-[state=unchecked]:bg-zinc-700 [&_[data-slot=switch-thumb]]:size-6 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-[calc(100%-4px)]"
+                  />
+                </div>
               </div>
 
               {/* Mini Consent Badge */}
@@ -370,7 +385,13 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
                 </span>
                 <span className="text-[--color-ash-gray] flex items-center gap-1.5">
                   Consent Status:{" "}
-                  <span className={`font-semibold flex items-center gap-0.5 ${data.account.memoryConsent ? "text-teal-400" : "text-gray-400"}`}>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      data.account.memoryConsent
+                        ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+                        : "bg-zinc-800/80 text-zinc-400 ring-1 ring-zinc-600/50"
+                    }`}
+                  >
                     {data.account.memoryConsent ? (
                       <>
                         <CheckCircle2 size={12} /> Enabled

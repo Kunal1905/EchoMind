@@ -122,9 +122,9 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
     <>
       <nav className="hidden md:block fixed top-0 left-0 right-0 z-50 backdrop-blur-lg bg-[--bg-darker]/85 border-b border-violet-500/15">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 md:gap-6 lg:gap-8">
             <motion.div
-              className="flex items-center gap-3"
+              className="flex shrink-0 items-center gap-3"
               whileHover={{ scale: 1.03 }}
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-teal-500">
@@ -135,7 +135,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
               </h2>
             </motion.div>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 md:gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPage === item.id;
@@ -143,7 +143,7 @@ export function Nav({ currentPage, onNavigate }: NavProps) {
                   <motion.button
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
-                    className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-all ${
+                    className={`relative flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all md:px-4 lg:px-5 ${
                       isActive
                         ? "bg-gradient-to-r from-violet-600 to-teal-500 text-white"
                         : "text-gray-300 hover:bg-white/10 hover:text-white"
