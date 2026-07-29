@@ -21,9 +21,9 @@ const isProtectedRoute = createRouteMatcher([
 ])
 
 function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
-  // Dynamically configure connect-src and script-src to support custom domain, local development, and Web Workers
-  let connectSrc = "connect-src 'self' https://echomind-1-de05.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com";
-  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://app.posthog.com https://us.i.posthog.com`;
+  // Dynamically configure connect-src, script-src, and frame-src for Clerk, Cloudflare Turnstile CAPTCHA, Google OAuth, custom domain, and Vapi
+  let connectSrc = "connect-src 'self' https://echomind-1-de05.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://challenges.cloudflare.com https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com";
+  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://challenges.cloudflare.com https://app.posthog.com https://us.i.posthog.com`;
 
   if (process.env.NODE_ENV !== "production") {
     // Allow any localhost/127.0.0.1 port for local development APIs and Hot Module Replacement
@@ -37,15 +37,15 @@ function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob: https: https://img.clerk.com https://*.googleusercontent.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
     "media-src 'self' blob:",
-    "frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://c.daily.co https://*.daily.co",
+    "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in https://challenges.cloudflare.com https://accounts.google.com https://c.daily.co https://*.daily.co",
     "worker-src 'self' blob:",
     "upgrade-insecure-requests",
     scriptSrc,
-    `style-src 'self' 'unsafe-inline' 'nonce-${nonce}' https://fonts.googleapis.com`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   ];
   const cspHeader = cspDirectives.join('; ');
 
