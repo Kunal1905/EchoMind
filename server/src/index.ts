@@ -4,7 +4,7 @@ import express from "express";
 import { clerkMiddleware } from "@clerk/express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-
+import compression from "compression";
 
 import sessionChatRouter from "./routes/session-chat";
 import historyRouter from "./routes/history";
@@ -43,11 +43,15 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
+app.use(compression());
+
 // server/src/index.ts — replace the clientOrigin + cors block:
 
 const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "";
 const productionOrigins = [
   "https://echo-mind-ncns-three.vercel.app",
+  "https://www.echomind.co.in",
+  "https://echomind.co.in",
 ];
 
 // ✅ Support a comma-separated list, and defensively strip trailing slashes
