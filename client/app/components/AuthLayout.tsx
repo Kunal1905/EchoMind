@@ -149,39 +149,44 @@ export const clerkAppearance = {
     spacingUnit: "1rem",
   },
   elements: {
-    card: "shadow-none border-0 bg-transparent p-0 overflow-visible",
-    rootBox: "w-full overflow-visible",
+    card: "shadow-none border-0 bg-transparent p-0 overflow-visible w-full max-w-full",
+    rootBox: "w-full overflow-visible max-w-full",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     formHeader: "hidden",
 
-    socialButtonsBlockButton: "relative flex flex-row items-center justify-center gap-3 h-12 w-full px-4 border border-white/15 hover:bg-white/5 transition-all duration-200 rounded-xl",
-    socialButtonsBlockButtonText: "text-white text-sm font-medium",
-    socialButtonsBlockButtonLogo: "h-5 w-5 flex-shrink-0 flex items-center justify-center mr-0",
+    socialButtonsBlockButton: "relative flex flex-row items-center justify-center gap-3 h-11 sm:h-12 w-full px-4 border border-white/15 hover:bg-white/5 transition-all duration-200 rounded-xl text-sm font-medium",
+    socialButtonsBlockButtonText: "text-white text-xs sm:text-sm font-medium",
+    socialButtonsBlockButtonLogo: "h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 flex items-center justify-center mr-0",
     socialButtonsBlockButtonArrow: "hidden",
     socialButtonsBlockButtonBadge: "absolute -top-2.5 right-4 bg-[#8052ff] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#090910] shadow-sm",
 
-    dividerRow: "my-4",
+    dividerRow: "my-2.5 sm:my-3.5",
     dividerText: "text-xs text-[#71717a]",
     dividerLine: "bg-white/10",
 
-    formFieldLabelRow: "flex items-center justify-between w-full mb-1.5",
-    formFieldLabel: "text-sm font-semibold text-white",
+    formFieldRow: "flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full",
+    formField: "w-full mb-0",
+    formFieldLabelRow: "flex items-center justify-between w-full mb-1",
+    formFieldLabel: "text-xs sm:text-sm font-semibold text-white",
     formFieldHintText: "text-xs font-normal text-[#71717a] ml-auto",
-    formFieldInput: "h-12 rounded-xl text-sm bg-white/5 border-white/15 text-white placeholder:text-white/25",
+    formFieldInput: "h-11 sm:h-12 rounded-xl text-xs sm:text-sm bg-white/5 border-white/15 text-white placeholder:text-white/25 w-full px-3.5",
     formFieldInputShowPasswordButton: "text-[#71717a] hover:text-white",
     formFieldErrorText: "text-[#f43f5e] text-[11px] mt-1",
 
-    formButtonPrimary: "h-12 rounded-xl text-sm font-semibold w-full mt-4",
+    formButtonPrimary: "h-11 sm:h-12 rounded-xl text-xs sm:text-sm font-semibold w-full mt-2.5 sm:mt-3.5",
 
-    footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] font-semibold transition-colors",
-    footerActionText: "text-[#71717a] text-sm",
-    footer: "bg-transparent mt-5 overflow-visible pb-2",
+    footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] text-xs font-semibold transition-colors text-center inline-block ml-1",
+    footerActionText: "text-[#71717a] text-xs font-normal text-center",
+    footerAction: "py-0.5 my-0 flex items-center justify-center gap-1 leading-normal text-center flex-wrap",
+    footer: "bg-transparent mt-2 sm:mt-3 overflow-visible pb-0 pt-0 border-t border-white/5 font-normal",
+    logoBox: "h-3 opacity-40 scale-90 -mt-0.5",
+    logoImage: "h-3 opacity-40",
 
-    alert: "rounded-xl border border-[#f43f5e]/20 bg-[#f43f5e]/8 text-[#f43f5e] text-sm p-3",
-    alertText: "text-[#f43f5e] text-sm",
+    alert: "rounded-xl border border-[#f43f5e]/20 bg-[#f43f5e]/8 text-[#f43f5e] text-xs sm:text-sm p-3",
+    alertText: "text-[#f43f5e] text-xs sm:text-sm",
 
-    form: "gap-4",
+    form: "gap-2.5 sm:gap-3.5 w-full",
     otpCodeFieldInput: "bg-white/5 border-white/10 text-white rounded-xl",
   },
 };
@@ -370,7 +375,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
         {/* ═══════════════════════════════════════════════════════════════
             RIGHT — AUTH PANEL  (40% desktop, full-width mobile)
         ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative flex flex-1 flex-col items-center justify-center px-5 py-10 lg:px-10 xl:px-14">
+        <div className="relative flex flex-1 flex-col items-center justify-center px-3.5 py-6 sm:px-6 sm:py-10 lg:px-10 xl:px-14 w-full max-w-full">
           {/* Glow behind card */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -389,15 +394,15 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-7 flex items-center gap-2.5 lg:hidden"
+            className="mb-4 sm:mb-6 flex items-center gap-2.5 lg:hidden"
           >
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full"
+              className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full"
               style={{ background: "linear-gradient(135deg, #8052ff 0%, #15846e 100%)" }}
             >
-              <MessageCircle size={15} className="text-white" />
+              <MessageCircle size={14} className="text-white sm:w-4 sm:h-4" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-white">
+            <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-white">
               EchoMind
             </span>
           </motion.div>
@@ -407,7 +412,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             initial={{ opacity: 0, y: 28, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
-            className="relative w-full"
+            className="relative w-full max-w-full"
             style={{ maxWidth: 450 }}
           >
             {/* Gradient border ring */}
@@ -427,7 +432,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
 
             {/* Card body */}
             <div
-              className="relative rounded-2xl px-6 py-8 sm:px-8 sm:py-9"
+              className="relative rounded-2xl px-4 py-5 sm:px-8 sm:py-8 w-full box-border"
               style={{
                 background: "var(--surface-auth-panel)",
                 backdropFilter: "blur(28px)",
@@ -438,11 +443,11 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
               }}
             >
               {/* Custom header — sits above Clerk component */}
-              <div className="mb-6 text-center">
-                <h2 className="text-[22px] font-bold tracking-tight text-white">
+              <div className="mb-4 sm:mb-5 text-center">
+                <h2 className="text-lg sm:text-[22px] font-bold tracking-tight text-white">
                   {mode === "sign-in" ? "Sign in to EchoMind" : "Create your account"}
                 </h2>
-                <p className="mt-1.5 text-sm text-[#9a9a9a] leading-relaxed">
+                <p className="mt-1 text-xs sm:text-sm text-[#9a9a9a] leading-relaxed">
                   {mode === "sign-in"
                     ? "Welcome back! Please sign in to continue"
                     : "Welcome! Please fill in the details to get started."}

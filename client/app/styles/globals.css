@@ -433,8 +433,14 @@ button {
 .cl-formFieldRow {
   width: 100% !important;
   display: flex !important;
-  flex-direction: row !important;
-  gap: 12px !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+@media (min-width: 640px) {
+  .cl-formFieldRow {
+    flex-direction: row !important;
+    gap: 12px !important;
+  }
 }
 .cl-formField {
   flex: 1 !important;
@@ -559,11 +565,21 @@ button {
   box-sizing: border-box !important;
   line-height: 1 !important;
 }
+.cl-formButtonPrimary::before {
+  content: none !important;
+  display: none !important;
+}
 .cl-formButtonPrimary::after {
-  content: " ▸" !important;
-  font-size: 11px !important;
-  margin-left: 6px !important;
+  content: " →" !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  margin-left: 8px !important;
   display: inline-block !important;
+  transition: transform 0.2s ease !important;
+}
+.cl-formButtonPrimary:hover::after {
+  transform: translateX(3px) !important;
 }
 .cl-formButtonPrimary:hover {
   background: linear-gradient(135deg, #9366ff 0%, #6d45d8 100%) !important;
@@ -577,8 +593,15 @@ button {
   opacity: 0.6 !important;
   transform: none !important;
 }
-.cl-formButtonPrimary .cl-spinner,
-.cl-formButtonPrimary svg {
+.cl-formButtonPrimary:disabled::after {
+  display: none !important;
+}
+/* Hide Clerk internal icon SVGs except spinner */
+.cl-formButtonPrimary svg:not(.cl-spinner),
+.cl-formButtonPrimaryIcon {
+  display: none !important;
+}
+.cl-formButtonPrimary .cl-spinner {
   width: 18px !important;
   height: 18px !important;
 }
@@ -603,23 +626,28 @@ button {
   font-size: 14px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: background 0.2s ease, border-color 0.2s ease !important;
+  transition: all 0.2s ease !important;
   box-sizing: border-box !important;
 }
 .cl-socialButtonsBlockButton:hover {
   background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(128, 82, 255, 0.35) !important;
 }
 .cl-socialButtonsBlockButtonText {
   color: #ffffff !important;
   font-size: 14px !important;
   font-weight: 500 !important;
-  line-height: 1 !important;
+}
+.cl-socialButtonsBlockButtonLogo {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  min-width: 18px !important;
+  flex-shrink: 0 !important;
+  position: static !important;
   margin: 0 !important;
   padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 /* Google icon — fixed size, centered */
 .cl-socialButtonsBlockButton svg,
@@ -661,7 +689,7 @@ div[class*="cl-socialButtonsBlockButtonBadge"] {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  margin: 16px 0 !important;
+  margin: 14px 0 !important;
 }
 .cl-dividerLine {
   flex: 1 !important;
@@ -670,23 +698,28 @@ div[class*="cl-socialButtonsBlockButtonBadge"] {
 }
 .cl-dividerText {
   color: #71717a !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   white-space: nowrap !important;
 }
 
 /* ── Footer ── */
 .cl-footer {
-  margin-top: 16px !important;
+  margin-top: 10px !important;
   padding: 0 !important;
 }
 .cl-footerAction {
-  margin-bottom: 4px !important;
+  margin-bottom: 2px !important;
   padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  flex-wrap: wrap !important;
 }
 .cl-footerActionLink {
   color: #8052ff !important;
   font-weight: 600 !important;
-  font-size: 14px !important;
+  font-size: 12px !important;
   transition: color 0.15s ease !important;
 }
 .cl-footerActionLink:hover {
@@ -694,7 +727,7 @@ div[class*="cl-socialButtonsBlockButtonBadge"] {
 }
 .cl-footerActionText {
   color: #71717a !important;
-  font-size: 14px !important;
+  font-size: 12px !important;
 }
 /* The Clerk logo/branding block — keep it on single line, clean spacing and logo size */
 .cl-footerPages,
@@ -710,9 +743,9 @@ div[class*="cl-branding"],
   white-space: nowrap !important;
   flex-wrap: nowrap !important;
   opacity: 0.35 !important;
-  margin: 20px auto 4px auto !important;
+  margin: 6px auto 0 auto !important;
   width: fit-content !important;
-  gap: 6px !important;
+  gap: 4px !important;
 }
 .cl-footerPages svg,
 .cl-internal svg,
