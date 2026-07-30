@@ -66,6 +66,13 @@ function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
 
 export default clerkMiddleware(async (auth, req) => {
   const nonce = generateNonce();
+  const host = req.headers.get("host") || "";
+
+  // Canonicalize apex domain (echomind.co.in -> www.echomind.co.in) to prevent Cloudflare Turnstile domain mismatch on SSO callbacks
+  if (host === "echomind.co.in") {
+    const canonicalUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, "https://www.echomind.co.in");
+    return NextResponse.redirect(canonicalUrl, 301);
+  }
 
   if (isPublicRoute(req)) {
     return addCspHeaders(NextResponse.next(), nonce);
