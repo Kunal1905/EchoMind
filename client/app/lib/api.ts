@@ -14,7 +14,7 @@ declare global {
 
 const defaultApiUrl =
   process.env.NODE_ENV === "production"
-    ? "https://echomind-1-de05.onrender.com/api"
+    ? "https://echomind-ig0h.onrender.com/api"
     : "http://localhost:4000/api";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL || defaultApiUrl;
