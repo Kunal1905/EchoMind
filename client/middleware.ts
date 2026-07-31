@@ -71,9 +71,11 @@ export default clerkMiddleware(async (auth, req) => {
   const nonce = generateNonce();
   const host = req.headers.get("host") || "";
   const pathname = req.nextUrl.pathname;
+  const isClerkSsoCallback =
+    pathname === "/sign-in/sso-callback" || pathname === "/sign-up/sso-callback";
 
-  // Canonicalize apex domain (echomind.co.in -> www.echomind.co.in) to prevent Cloudflare Turnstile domain mismatch on SSO callbacks
-  if (host === "echomind.co.in") {
+  // Canonicalize apex domain, but let Clerk consume OAuth callbacks on the origin that received them.
+  if (host === "echomind.co.in" && !isClerkSsoCallback) {
     const canonicalUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, "https://www.echomind.co.in");
     return NextResponse.redirect(canonicalUrl, 301);
   }
