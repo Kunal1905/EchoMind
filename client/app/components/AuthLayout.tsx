@@ -149,8 +149,8 @@ export const clerkAppearance = {
     spacingUnit: "1rem",
   },
   elements: {
-    card: "shadow-none border-0 bg-transparent p-0 overflow-visible w-full max-w-full",
-    rootBox: "w-full overflow-visible max-w-full",
+    card: "shadow-none border-0 bg-transparent p-0 overflow-hidden w-full max-w-full min-w-0",
+    rootBox: "w-full overflow-hidden max-w-full min-w-0",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     formHeader: "hidden",
@@ -174,7 +174,7 @@ export const clerkAppearance = {
     formFieldInputShowPasswordButton: "text-[#71717a] hover:text-white",
     formFieldErrorText: "text-[#f43f5e] text-[11px] mt-1",
 
-    formButtonPrimary: "h-11 sm:h-12 rounded-xl text-xs sm:text-sm font-semibold w-full mt-2.5 sm:mt-3.5",
+    formButtonPrimary: "relative h-11 sm:h-12 rounded-xl text-xs sm:text-sm font-semibold w-full mt-2.5 sm:mt-3.5",
 
     footerActionLink: "text-[#8052ff] hover:text-[#a78bfa] text-xs font-semibold transition-colors text-center inline-block ml-1",
     footerActionText: "text-[#71717a] text-xs font-normal text-center",
@@ -375,7 +375,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
         {/* ═══════════════════════════════════════════════════════════════
             RIGHT — AUTH PANEL  (40% desktop, full-width mobile)
         ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative flex flex-1 flex-col items-center justify-center px-3.5 py-6 sm:px-6 sm:py-10 lg:px-10 xl:px-14 w-full max-w-full">
+        <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-10 xl:px-14 w-full max-w-full">
           {/* Glow behind card */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -412,7 +412,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             initial={{ opacity: 0, y: 28, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
-            className="relative w-full max-w-full"
+            className="relative w-full max-w-full min-w-0"
             style={{ maxWidth: 450 }}
           >
             {/* Gradient border ring */}
@@ -432,7 +432,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
 
             {/* Card body */}
             <div
-              className="relative rounded-2xl px-4 py-5 sm:px-8 sm:py-8 w-full box-border"
+              className="relative rounded-2xl px-4 py-5 sm:px-8 sm:py-8 w-full min-w-0 overflow-hidden box-border"
               style={{
                 background: "var(--surface-auth-panel)",
                 backdropFilter: "blur(28px)",

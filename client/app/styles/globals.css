@@ -413,10 +413,28 @@ button {
   border: none !important;
   background: transparent !important;
   border-radius: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
-.cl-rootBox { width: 100% !important; }
-.cl-main { width: 100% !important; }
+.cl-rootBox,
+.cl-main,
+.cl-cardBox,
+.cl-card,
+.cl-scrollBox {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
 .cl-scrollBox { overflow: visible !important; }
+.cl-rootBox *,
+.cl-card * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
 
 /* ── Auth headers: we render our own in AuthLayout ── */
 .cl-header,
@@ -429,6 +447,8 @@ button {
   flex-direction: column !important;
   gap: 16px !important;
   width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 .cl-formFieldRow {
   width: 100% !important;
@@ -487,6 +507,8 @@ button {
   min-height: 48px !important;
   max-height: 48px !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
 }
 .cl-formFieldInput,
 .cl-formFieldInput[type="text"],
@@ -543,6 +565,7 @@ button {
 
 /* ── Primary / Continue button ── */
 .cl-formButtonPrimary {
+  position: relative !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -564,22 +587,27 @@ button {
   margin-top: 16px !important;
   box-sizing: border-box !important;
   line-height: 1 !important;
+  overflow: hidden !important;
 }
 .cl-formButtonPrimary::before {
   content: none !important;
   display: none !important;
 }
 .cl-formButtonPrimary::after {
-  content: " →" !important;
+  content: "→" !important;
+  position: absolute !important;
+  left: calc(50% + 38px) !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
-  margin-left: 8px !important;
-  display: inline-block !important;
+  margin-left: 0 !important;
+  display: block !important;
   transition: transform 0.2s ease !important;
 }
 .cl-formButtonPrimary:hover::after {
-  transform: translateX(3px) !important;
+  transform: translate(3px, -50%) !important;
 }
 .cl-formButtonPrimary:hover {
   background: linear-gradient(135deg, #9366ff 0%, #6d45d8 100%) !important;
@@ -628,6 +656,9 @@ button {
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
 }
 .cl-socialButtonsBlockButton:hover {
   background: rgba(255, 255, 255, 0.08) !important;
@@ -706,6 +737,10 @@ div[class*="cl-socialButtonsBlockButtonBadge"] {
 .cl-footer {
   margin-top: 10px !important;
   padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
 }
 .cl-footerAction {
   margin-bottom: 2px !important;
@@ -743,9 +778,18 @@ div[class*="cl-branding"],
   white-space: nowrap !important;
   flex-wrap: nowrap !important;
   opacity: 0.35 !important;
-  margin: 6px auto 0 auto !important;
+  margin: 4px auto 0 auto !important;
   width: fit-content !important;
+  max-width: 160px !important;
+  min-height: 16px !important;
+  height: 16px !important;
+  padding: 0 !important;
   gap: 4px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: scale(0.84) !important;
+  transform-origin: center top !important;
 }
 .cl-footerPages svg,
 .cl-internal svg,
