@@ -20,11 +20,13 @@ const isProtectedRoute = createRouteMatcher([
   '/history(.*)',
 ])
 
-function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
+function addCspHeaders(response: NextResponse, nonce: string, pathname = ""): NextResponse {
   // Dynamically configure connect-src, script-src, and frame-src for Clerk, Cloudflare Turnstile CAPTCHA, Google OAuth, custom domain, and Vapi
   const cloudflareTurnstileSrc = "https://challenges.cloudflare.com https://*.challenges.cloudflare.com";
-  let connectSrc = `connect-src 'self' https://echomind-1-de05.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com`;
-  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://app.posthog.com https://us.i.posthog.com`;
+  const clerkProtectSrc = "https://*.protect.clerk.com";
+  const isAuthFlow = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+  let connectSrc = `connect-src 'self' https://echomind-1-de05.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com`;
+  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://app.posthog.com https://us.i.posthog.com`;
 
   if (process.env.NODE_ENV !== "production") {
     // Allow any localhost/127.0.0.1 port for local development APIs and Hot Module Replacement
@@ -42,7 +44,7 @@ function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
     "media-src 'self' blob:",
-    `frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://accounts.google.com https://c.daily.co https://*.daily.co`,
+    `frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://accounts.google.com https://c.daily.co https://*.daily.co`,
     "worker-src 'self' blob:",
     "upgrade-insecure-requests",
     scriptSrc,
@@ -55,8 +57,8 @@ function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=(self), usb=(), fullscreen=(self)');
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Opener-Policy', isAuthFlow ? 'same-origin-allow-popups' : 'same-origin');
+  response.headers.set('Cross-Origin-Resource-Policy', isAuthFlow ? 'cross-origin' : 'same-origin');
   response.headers.set('X-DNS-Prefetch-Control', 'on');
 
   // Pass nonce to the response so it can be used in components
@@ -68,6 +70,7 @@ function addCspHeaders(response: NextResponse, nonce: string): NextResponse {
 export default clerkMiddleware(async (auth, req) => {
   const nonce = generateNonce();
   const host = req.headers.get("host") || "";
+  const pathname = req.nextUrl.pathname;
 
   // Canonicalize apex domain (echomind.co.in -> www.echomind.co.in) to prevent Cloudflare Turnstile domain mismatch on SSO callbacks
   if (host === "echomind.co.in") {
@@ -76,7 +79,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (isPublicRoute(req)) {
-    return addCspHeaders(NextResponse.next(), nonce);
+    return addCspHeaders(NextResponse.next(), nonce, pathname);
   }
 
   // Enforce login on protected routes
@@ -88,11 +91,11 @@ export default clerkMiddleware(async (auth, req) => {
       const url = new URL('/sign-in', req.url);
       url.searchParams.set('redirect_url', req.url);
       const redirectResponse = NextResponse.redirect(url);
-      return addCspHeaders(redirectResponse, nonce);
+      return addCspHeaders(redirectResponse, nonce, pathname);
     }
   }
 
-  return addCspHeaders(NextResponse.next(), nonce);
+  return addCspHeaders(NextResponse.next(), nonce, pathname);
 });
 
 export const config = {
