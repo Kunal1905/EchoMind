@@ -429,6 +429,7 @@ button {
   min-width: 0 !important;
   margin-left: auto !important;
   margin-right: auto !important;
+  overflow: visible !important;
   box-sizing: border-box !important;
 }
 .cl-scrollBox { overflow: visible !important; }
@@ -567,12 +568,13 @@ button {
 
 /* ── Primary / Continue button ── */
 .cl-formButtonPrimary {
+  position: relative !important;
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 6px !important;
+  gap: 0 !important;
   width: 100% !important;
   height: 48px !important;
   min-height: 48px !important;
@@ -600,11 +602,16 @@ button {
 }
 .cl-formButtonPrimary::after {
   content: "→" !important;
+  position: absolute !important;
+  left: calc(50% + 34px) !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
   margin-left: 0 !important;
-  display: inline-block !important;
+  display: block !important;
+  pointer-events: none !important;
   transition: transform 0.2s ease !important;
 }
 .cl-formButtonPrimary > span,
@@ -617,7 +624,7 @@ button {
   justify-content: center !important;
 }
 .cl-formButtonPrimary:hover::after {
-  transform: translateX(3px) !important;
+  transform: translate(2px, -50%) !important;
 }
 .cl-formButtonPrimary:hover {
   background: linear-gradient(135deg, #9366ff 0%, #6d45d8 100%) !important;

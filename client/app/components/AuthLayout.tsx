@@ -375,7 +375,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
         {/* ═══════════════════════════════════════════════════════════════
             RIGHT — AUTH PANEL  (40% desktop, full-width mobile)
         ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-x-hidden px-4 py-6 sm:px-6 sm:py-10 lg:px-10 xl:px-14 w-full max-w-full">
+        <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-x-hidden px-5 py-6 sm:px-6 sm:py-10 lg:px-10 xl:px-14 w-full max-w-full">
           {/* Glow behind card */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -413,7 +413,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
             className="relative mx-auto w-full max-w-full min-w-0 self-center"
-            style={{ maxWidth: 430 }}
+            style={{ maxWidth: 420 }}
           >
             {/* Gradient border ring */}
             <div
