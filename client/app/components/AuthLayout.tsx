@@ -149,8 +149,8 @@ export const clerkAppearance = {
     spacingUnit: "1rem",
   },
   elements: {
-    card: "shadow-none border-0 bg-transparent p-0 overflow-hidden w-full max-w-full min-w-0",
-    rootBox: "w-full overflow-hidden max-w-full min-w-0",
+    card: "shadow-none border-0 bg-transparent p-0 overflow-visible w-full max-w-full min-w-0",
+    rootBox: "w-full overflow-visible max-w-full min-w-0",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     formHeader: "hidden",
@@ -432,7 +432,7 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
 
             {/* Card body */}
             <div
-              className="relative rounded-2xl px-4 py-5 sm:px-8 sm:py-8 w-full min-w-0 overflow-hidden box-border"
+              className="relative rounded-2xl px-4 py-5 sm:px-8 sm:py-8 w-full min-w-0 overflow-visible box-border"
               style={{
                 background: "var(--surface-auth-panel)",
                 backdropFilter: "blur(28px)",
