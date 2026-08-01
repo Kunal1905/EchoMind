@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, ChevronDown, Loader2, MessageCircle, Brain, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
+import { Calendar, ChevronDown, MessageCircle, Brain, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import api from "../lib/api";
@@ -10,6 +10,14 @@ import { MoodChart } from "../components/MoodChart";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
 import { EchoOrb } from "../components/EchoOrb";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 
 interface Session {
@@ -35,7 +43,7 @@ let cachedMoodEntries: MoodEntry[] | null = null;
 let cachedUserId: string | null = null;
 let hasLoadedOnce = false;
 
-export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = false }: { onNavigate?: (p: string) => void; isPremium?: boolean; }) {
+export function HistoryContent({ onNavigate = () => { } }: { onNavigate?: (p: string) => void; isPremium?: boolean; }) {
   const { isLoaded, isSignedIn, user } = useUser();
   const posthog = usePostHog();
   const [sessions, setSessions] = useState<Session[]>(() => {
@@ -58,10 +66,16 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
   });
   const [error, setError] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!window.confirm("Are you sure you want to delete this session? This action cannot be undone.")) return;
+  const confirmDeleteSession = async () => {
+    if (!sessionToDelete) return;
+    setDeleteError(null);
+    setIsDeleting(true);
     try {
+      const sessionId = sessionToDelete.sessionId;
       const response = await api.delete(`/session-chat/${sessionId}`);
       if (response.status >= 200 && response.status < 300) {
         // Remove from local states
@@ -76,12 +90,15 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
 
         // Track session deleted event
         posthog.capture("session_deleted");
+        setSessionToDelete(null);
       } else {
-        alert("Failed to delete session. Please try again.");
+        setDeleteError("We could not delete this session. Please try again.");
       }
     } catch (err) {
       console.error("Error deleting session:", err);
-      alert("Error deleting session. Please try again.");
+      setDeleteError("Something went wrong while deleting this session. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -300,7 +317,8 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteSession(s.sessionId);
+                    setDeleteError(null);
+                    setSessionToDelete(s);
                   }}
                   className="p-3 text-[--color-ash-gray] hover:text-red-400 transition-colors"
                   title="Delete session"
@@ -335,6 +353,67 @@ export function HistoryContent({ onNavigate = (p: string) => { }, isPremium = fa
           ))}
         </div>
       </div>
+      <Dialog
+        open={!!sessionToDelete}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setSessionToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent className="border border-white/10 bg-[#090910]/95 text-white shadow-2xl backdrop-blur-xl sm:max-w-md">
+          <DialogHeader className="text-left">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10">
+              <Trash2 className="text-red-300" size={18} />
+            </div>
+            <DialogTitle className="text-xl font-semibold tracking-tight text-white">
+              Delete this session?
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-[--color-silver-mist]">
+              This will permanently remove this reflection and its mood entry from your history.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {sessionToDelete && (
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-[--color-silver-mist]">
+              <div className="flex items-center gap-2 text-white">
+                <Calendar className="text-[--color-electric-iris]" size={15} />
+                <span>{formatDisplayDate(sessionToDelete.createdAt)}</span>
+              </div>
+            </div>
+          )}
+
+          {deleteError && (
+            <div className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {deleteError}
+            </div>
+          )}
+
+          <DialogFooter className="gap-3 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSessionToDelete(null);
+                setDeleteError(null);
+              }}
+              disabled={isDeleting}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-[--color-silver-mist] transition-colors hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Keep session
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteSession}
+              disabled={isDeleting}
+              className="inline-flex items-center justify-center rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDeleting ? "Deleting..." : "Delete session"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
