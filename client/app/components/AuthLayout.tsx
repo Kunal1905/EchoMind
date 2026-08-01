@@ -2,7 +2,8 @@
 
 import { motion } from "motion/react";
 import { useEffect, useRef, ReactNode } from "react";
-import { MessageCircle, Brain, ShieldCheck, TrendingUp } from "lucide-react";
+import { createRoot, type Root } from "react-dom/client";
+import { MessageCircle, Brain, ShieldCheck, TrendingUp, ArrowRight } from "lucide-react";
 
 
 // ─── BrandingParticles ────────────────────────────────────────────────────────
@@ -84,6 +85,51 @@ function BrandingParticles() {
       aria-hidden="true"
     />
   );
+}
+
+function ClerkPrimaryButtonArrow() {
+  useEffect(() => {
+    const mountedIcons = new Map<HTMLButtonElement, { mount: HTMLSpanElement; root: Root }>();
+
+    const syncIcons = () => {
+      document.querySelectorAll<HTMLButtonElement>(".cl-formButtonPrimary").forEach((button) => {
+        const label = button.textContent?.replace(/\s+/g, " ").trim().toLowerCase();
+        if (label !== "continue" || mountedIcons.has(button)) return;
+
+        const mount = document.createElement("span");
+        mount.className = "echo-auth-button-icon";
+        mount.setAttribute("aria-hidden", "true");
+        button.appendChild(mount);
+
+        const root = createRoot(mount);
+        root.render(<ArrowRight className="echo-auth-arrow-icon" size={18} strokeWidth={2.2} />);
+        mountedIcons.set(button, { mount, root });
+      });
+
+      mountedIcons.forEach(({ mount, root }, button) => {
+        if (!document.body.contains(button)) {
+          root.unmount();
+          mount.remove();
+          mountedIcons.delete(button);
+        }
+      });
+    };
+
+    syncIcons();
+    const observer = new MutationObserver(syncIcons);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      mountedIcons.forEach(({ mount, root }) => {
+        root.unmount();
+        mount.remove();
+      });
+      mountedIcons.clear();
+    };
+  }, []);
+
+  return null;
 }
 
 // ─── Feature card ─────────────────────────────────────────────────────────────
@@ -237,6 +283,8 @@ export default function AuthLayout({ children, mode }: AuthLayoutProps) {
         className="relative flex min-h-screen w-full overflow-hidden"
         style={{ background: "#000000" }}
       >
+        <ClerkPrimaryButtonArrow />
+
         {/* Full-page grid */}
         <div
           className="pointer-events-none absolute inset-0 z-0"

@@ -568,13 +568,12 @@ button {
 
 /* ── Primary / Continue button ── */
 .cl-formButtonPrimary {
-  position: relative !important;
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0 !important;
+  gap: 8px !important;
   width: 100% !important;
   height: 48px !important;
   min-height: 48px !important;
@@ -601,18 +600,8 @@ button {
   display: none !important;
 }
 .cl-formButtonPrimary::after {
-  content: "→" !important;
-  position: absolute !important;
-  left: calc(50% + 34px) !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-  margin-left: 0 !important;
-  display: block !important;
-  pointer-events: none !important;
-  transition: transform 0.2s ease !important;
+  content: none !important;
+  display: none !important;
 }
 .cl-formButtonPrimary > span,
 .cl-formButtonPrimary > div {
@@ -622,9 +611,6 @@ button {
   flex: 0 0 auto !important;
   align-items: center !important;
   justify-content: center !important;
-}
-.cl-formButtonPrimary:hover::after {
-  transform: translate(2px, -50%) !important;
 }
 .cl-formButtonPrimary:hover {
   background: linear-gradient(135deg, #9366ff 0%, #6d45d8 100%) !important;
@@ -638,17 +624,33 @@ button {
   opacity: 0.6 !important;
   transform: none !important;
 }
-.cl-formButtonPrimary:disabled::after {
-  display: none !important;
-}
 /* Hide Clerk internal icon SVGs except spinner */
-.cl-formButtonPrimary svg:not(.cl-spinner),
+.cl-formButtonPrimary svg:not(.cl-spinner):not(.echo-auth-arrow-icon),
 .cl-formButtonPrimaryIcon {
   display: none !important;
 }
 .cl-formButtonPrimary .cl-spinner {
   width: 18px !important;
   height: 18px !important;
+}
+.echo-auth-button-icon {
+  display: inline-flex !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+.echo-auth-arrow-icon {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+}
+.cl-formButtonPrimary:hover .echo-auth-button-icon {
+  transform: translateX(2px) !important;
+  transition: transform 0.2s ease !important;
 }
 
 /* ── Social login (Google) button ── */
