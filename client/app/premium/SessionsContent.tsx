@@ -7,57 +7,63 @@ import PricingCard from "./PricingCard";
 
 type SessionsContentProps = {
   onNavigate?: (page: string) => void;
-  onUpgrade?: (calls?: number, planName?: string, price?: string) => void | Promise<void>;
+  onUpgrade?: (planId: "starter") => void | Promise<void>;
   isPremium?: boolean;
-  currentPlan?: "free" | "basic" | "pro" | "premium";
+  currentPlan?: "free" | "starter" | "growth" | "pro";
 };
 
 const plans = [
   {
-    name: "Basic",
-    price: "₹249",
-    minutes: 30,
+    id: "starter" as const,
+    name: "Starter",
+    price: "₹399",
+    minutes: 20,
     accent: "#0D9488", // Modern Teal
     accentRgb: "13, 148, 136",
-    badge: "✨ START HERE",
+    badge: "LIVE",
     icon: <Sparkles />,
-    featured: false,
+    featured: true,
+    available: true,
     features: [
+      "20 voice conversation minutes each month",
       "AI-generated session summaries",
-      "Mood timeline & history tracker",
-      "Secure cloud storage for logs",
-      "Standard processing queue speeds"
+      "Mood timeline and history tracker",
+      "Secure cloud storage for logs"
     ],
   },
   {
-    name: "Pro",
-    price: "₹499",
-    minutes: 60,
+    id: "growth" as const,
+    name: "Growth",
+    price: "₹799",
+    minutes: 40,
     accent: "#8B5CF6", // Premium Purple
     accentRgb: "139, 92, 246",
-    badge: "🔥 MOST POPULAR",
+    badge: "COMING SOON",
     icon: <Zap />,
-    featured: true,
+    featured: false,
+    available: false,
     features: [
-      "Everything in Basic plan",
-      "Double voice reflection time",
+      "40 voice conversation minutes each month",
+      "Everything in Starter",
       "Advanced mood trend reports",
       "Priority AI summary speed"
     ],
   },
   {
-    name: "Premium",
-    price: "₹999",
-    minutes: 120,
+    id: "pro" as const,
+    name: "Pro",
+    price: "₹1,499",
+    minutes: 75,
     accent: "#F59E0B", // Luxury Amber/Gold
     accentRgb: "245, 158, 11",
-    badge: "👑 BEST VALUE",
+    badge: "COMING SOON",
     icon: <Crown />,
     featured: false,
+    available: false,
     features: [
-      "Everything in Pro plan",
-      "Maximum voice reflection time",
-      "Deep psychological insights (AI)",
+      "75 voice conversation minutes each month",
+      "Everything in Growth",
+      "Deep psychological insights",
       "Exclusive access to future features"
     ],
   },
@@ -81,14 +87,14 @@ export function SessionsContent({
           <div>
             <div className="void-kicker mb-5 inline-flex items-center gap-2">
               <Crown className="text-amber-400" size={16} />
-              {isPremium ? `Premium active (${currentPlan.toUpperCase()})` : "Upgrade your EchoMind sessions"}
+              {isPremium ? `Plan active (${currentPlan.toUpperCase()})` : "Upgrade your EchoMind sessions"}
             </div>
             <h1 className="void-display max-w-4xl text-4xl sm:text-5xl font-extrabold tracking-tight">
               Choose the time your reflection needs.
             </h1>
           </div>
           <p className="void-copy text-neutral-400 text-lg leading-relaxed">
-            Add more guided voice time and keep your session history available as your reflection practice grows.
+            Choose a monthly voice-time allowance and keep your session history available as your reflection practice grows.
           </p>
         </div>
 
@@ -114,12 +120,14 @@ export function SessionsContent({
                   accentRgb={plan.accentRgb}
                   badge={plan.badge}
                   featured={plan.featured}
+                  available={plan.available}
                   features={plan.features}
                   isCurrentPlan={isCurrentPlan}
                   index={index}
                   onUpgrade={() => {
-                    posthog.capture("upgrade_clicked", { planId: plan.name, price: plan.price });
-                    onUpgrade(Math.ceil(plan.minutes / 10), plan.name, plan.price);
+                    if (plan.id !== "starter") return;
+                    posthog.capture("upgrade_clicked", { planId: plan.id, price: plan.price });
+                    onUpgrade(plan.id);
                   }}
                 />
               </div>
@@ -142,4 +150,3 @@ export function SessionsContent({
 }
 
 export default SessionsContent;
-

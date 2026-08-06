@@ -4,7 +4,7 @@ import { db } from "../config/db";
 import { usersTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { eq } from "drizzle-orm";
-import { PLANS, type PlanKey } from "../config/plans";
+import { PLANS, isPurchasablePlan, type PlanKey } from "../config/plans";
 
 const router = Router();
 
@@ -33,6 +33,7 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
       freeTrialUsed,
       freeTrialLimit,
       isPremium:        u.plan !== "free",
+      allowanceResetAt:  u.minuteAllowanceResetAt,
     });
   } catch (error) {
     console.error("[subscription GET]", error);
@@ -46,8 +47,12 @@ router.post("/create-order", requireUser, async (req: AuthedRequest, res) => {
   const { planId } = req.body as { planId: PlanKey };
   const plan = PLANS[planId];
 
-  if (!plan || plan.price === 0) {
+  if (!plan) {
     return res.status(400).json({ error: "Invalid plan" });
+  }
+
+  if (!isPurchasablePlan(planId)) {
+    return res.status(400).json({ error: `${plan.name} is coming soon and is not purchasable yet.` });
   }
 
   try {

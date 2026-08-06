@@ -1,5 +1,5 @@
 import HomeContent from "./HomeContent";
 
 export default function Home() {
-  return <HomeContent isPremium={false} premiumCalls={0} />;
+  return <HomeContent isPremium={false} premiumCalls={10} />;
 }

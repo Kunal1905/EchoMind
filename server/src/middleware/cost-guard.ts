@@ -14,6 +14,7 @@ import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import type { AuthedRequest } from "./auth";
 import { getRedis } from "../lib/redis";
+import { ensureMonthlyAllowance } from "../lib/planAllowance";
 
 // ---------------------------------------------------------------------------
 // 1. KILL SWITCH — check this first, before anything else spends money.
@@ -99,35 +100,24 @@ export async function callStartRateLimit(req: AuthedRequest, res: Response, next
 }
 
 // ---------------------------------------------------------------------------
-// 3. DAILY MINUTE CAP per user — the actual cost-control lever. Check BEFORE
-//    starting a Vapi call; increment AFTER the call ends via Vapi's webhook.
+// 3. MONTHLY MINUTE ALLOWANCE per user. The DB minute balance is the source of
+//    truth; this guard only rolls it over once per calendar month before a call.
 // ---------------------------------------------------------------------------
-export const FREE_TIER_DAILY_MINUTE_CAP = 15; // tune this to your real budget
-
-export function todayKey(userId: string) {
-  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, resets daily
-  return `usage:minutes:${userId}:${date}`;
+export function monthKey(userId: string) {
+  const now = new Date();
+  const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  return `usage:minutes:${userId}:${month}`;
 }
 
-export async function dailyMinuteCapGuard(req: AuthedRequest, res: Response, next: NextFunction) {
+export async function monthlyMinuteAllowanceGuard(req: AuthedRequest, res: Response, next: NextFunction) {
   const auth = getAuth(req);
   const userId = req.authUserId || auth?.userId;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const redis = getRedis();
-    if (redis) {
-      const usedSeconds = Number((await redis.get<number>(todayKey(userId))) ?? 0);
-      const usedMinutes = usedSeconds / 60;
-
-      if (usedMinutes >= FREE_TIER_DAILY_MINUTE_CAP) {
-        return res.status(429).json({
-          error: `Daily voice limit reached (${FREE_TIER_DAILY_MINUTE_CAP} min). Resets at midnight, or upgrade for more.`,
-        });
-      }
-    }
+    await ensureMonthlyAllowance(userId);
   } catch (error) {
-    console.warn("[cost-guard] dailyMinuteCapGuard check failed:", error);
+    console.warn("[cost-guard] monthlyMinuteAllowanceGuard check failed:", error);
   }
 
   next();
@@ -139,9 +129,9 @@ export async function recordCallUsage(userId: string, durationSeconds: number) {
   try {
     const redis = getRedis();
     if (redis) {
-      const key = todayKey(userId);
+      const key = monthKey(userId);
       await redis.incrby(key, Math.round(durationSeconds));
-      await redis.expire(key, 60 * 60 * 26); // auto-clean ~a day after the window
+      await redis.expire(key, 60 * 60 * 24 * 40); // auto-clean after the monthly window
     }
   } catch (error) {
     console.error("[cost-guard] recordCallUsage failed:", error);

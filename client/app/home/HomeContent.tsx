@@ -477,7 +477,7 @@ export default function HomeContent({
             <div className="void-kicker mb-5 flex items-center gap-2">
               <Timer size={14} /> Access
             </div>
-            <h2 className="void-subheading mb-5">Start with 5 free minutes.</h2>
+            <h2 className="void-subheading mb-5">Start with 10 free minutes each month.</h2>
             <p className="void-copy">
               Use EchoMind immediately with no card required. Your current
               balance is {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""}.
@@ -491,7 +491,7 @@ export default function HomeContent({
               Add time when the habit sticks.
             </h2>
             <p className="void-copy">
-              Paid packs extend voice time while keeping session history and mood
+              Monthly plans extend voice time while keeping session history and mood
               tracking available for longer reflection cycles.
             </p>
             <button

@@ -6,8 +6,9 @@ export const usersTable = pgTable("users_table", {
   email: text("email").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   plan: varchar("plan").default("free").notNull(),
-  minutesRemaining: integer("minutes_remaining").default(5).notNull(),
-  minutesTotal: integer("minutes_total").default(0).notNull(),
+  minutesRemaining: integer("minutes_remaining").default(10).notNull(),
+  minutesTotal: integer("minutes_total").default(10).notNull(),
+  minuteAllowanceResetAt: timestamp("minute_allowance_reset_at").defaultNow().notNull(),
   memoryConsent: boolean("memory_consent").default(false).notNull(),
   memoryConsentAt: timestamp("memory_consent_at"),
 });

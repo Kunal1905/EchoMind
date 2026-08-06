@@ -8,10 +8,59 @@ import { ChatContent } from "./echo/[sessionId]/ChatContent";
 import { HistoryContent } from "./history/HistoryContent";
 import { SessionsContent } from "./premium/SessionsContent";
 import { SettingsContent } from "./settings/SettingsContent";
-import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@clerk/nextjs";
 
-const FREE_TRIAL_LIMIT = 5;
+const FREE_TRIAL_LIMIT = 10;
+type PlanId = "free" | "starter" | "growth" | "pro";
+
+type ApiError = {
+  response?: {
+    status?: number;
+    data?: {
+      error?: string;
+    };
+  };
+};
+
+type RazorpayFailure = {
+  error: {
+    description?: string;
+  };
+};
+
+type RazorpayInstance = {
+  on: (event: "payment.failed", handler: (response: RazorpayFailure) => void) => void;
+  open: () => void;
+};
+
+type RazorpayConstructor = new (options: {
+  key: string | undefined;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: () => void | Promise<void>;
+  modal: {
+    ondismiss: () => void;
+  };
+  prefill: {
+    name: string;
+    email: string;
+  };
+  theme: {
+    color: string;
+  };
+}) => RazorpayInstance;
+
+declare global {
+  interface Window {
+    Razorpay?: RazorpayConstructor;
+  }
+}
+
+const asApiError = (error: unknown): ApiError =>
+  typeof error === "object" && error !== null ? (error as ApiError) : {};
 
 const defaultSubscriptionData = {
   freeTrialUsed: 0,
@@ -19,7 +68,7 @@ const defaultSubscriptionData = {
   premiumCallsRemaining: FREE_TRIAL_LIMIT,
   premiumCallsTotal: FREE_TRIAL_LIMIT,
   isPremium: false,
-  plan: "free" as "free" | "basic" | "pro" | "premium",
+  plan: "free" as PlanId,
 };
 
 const loadRazorpayCheckout = () =>
@@ -29,7 +78,7 @@ const loadRazorpayCheckout = () =>
       return;
     }
 
-    if ((window as any).Razorpay) {
+    if (window.Razorpay) {
       resolve();
       return;
     }
@@ -53,7 +102,6 @@ const loadRazorpayCheckout = () =>
   });
 
 export default function Home() {
-  const posthog = usePostHog();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
 
@@ -90,8 +138,9 @@ export default function Home() {
           console.error("Failed to fetch subscription data:", response.status);
           setSubscriptionData(defaultSubscriptionData);
         }
-      } catch (error: any) {
-        if (error.response?.status === 401) {
+      } catch (error: unknown) {
+        const apiError = asApiError(error);
+        if (apiError.response?.status === 401) {
           setSubscriptionData(defaultSubscriptionData);
         } else {
           console.error("Error fetching subscription data:", error);
@@ -110,7 +159,7 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
-  const handleUpgrade = async (planId: "basic" | "pro" | "premium") => {
+  const handleUpgrade = async (planId: "starter") => {
     try {
       await loadRazorpayCheckout();
 
@@ -120,13 +169,17 @@ export default function Home() {
       } : undefined;
       const orderRes = await api.post("/subscription/create-order", { planId }, authConfig);
       const { orderId, amount, currency } = orderRes.data;
+      const Razorpay = window.Razorpay;
+      if (!Razorpay) {
+        throw new Error("Razorpay checkout failed to load.");
+      }
 
-      const rzp = new (window as any).Razorpay({
+      const rzp = new Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount,
         currency,
         name: "EchoMind",
-        description: `${planId} plan`,
+        description: "Starter monthly plan",
         order_id: orderId,
         handler: async () => {
           try {
@@ -140,7 +193,7 @@ export default function Home() {
               freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
               plan: sub.data.plan || "free",
             });
-            alert("Payment successful! Your minutes have been added.");
+            alert("Payment successful! Your Starter monthly plan is active.");
           } catch (e) {
             console.error("Failed to refresh subscription after payment:", e);
             alert("Payment succeeded, but we couldn't refresh your balance. Please reload the page.");
@@ -155,16 +208,17 @@ export default function Home() {
         theme: { color: "#7C3AED" },
       });
 
-      rzp.on("payment.failed", (response: any) => {
+      rzp.on("payment.failed", (response: RazorpayFailure) => {
         console.error("Payment failed:", response.error);
         alert(`Payment failed: ${response.error.description || "Please try again."}`);
       });
 
       rzp.open();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = asApiError(err);
       console.error("Upgrade error:", err);
       alert(
-        err.response?.data?.error ||
+        apiError.response?.data?.error ||
         "Couldn't start the payment process. Please try again in a moment."
       );
     }
@@ -232,15 +286,7 @@ export default function Home() {
             {currentPage === "sessions" && (
               <SessionsContent
                 onNavigate={handleNavigate}
-                onUpgrade={(calls?: number, planName?: string) => {
-                  const planMap: Record<string, "basic" | "pro" | "premium"> = {
-                    "basic": "basic",
-                    "pro": "pro",
-                    "premium": "premium"
-                  };
-                  const mappedPlanId = planName ? planMap[planName.toLowerCase()] : "basic";
-                  return handleUpgrade(mappedPlanId);
-                }}
+                onUpgrade={handleUpgrade}
                 isPremium={subscriptionData.isPremium}
                 currentPlan={subscriptionData.plan}
               />

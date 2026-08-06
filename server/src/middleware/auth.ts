@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 import { db } from "../config/db";
 import { usersTable } from "../config/schema";
 import { getRedis } from "../lib/redis";
+import { ensureMonthlyAllowance } from "../lib/planAllowance";
 
 export type AuthedRequest = Request & {
   authUserId?: string;
@@ -67,6 +68,7 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
       try {
         const seen = await redis.get(cacheKey);
         if (seen) {
+          await ensureMonthlyAllowance(auth.userId);
           return next();
         }
       } catch (redisError) {
@@ -89,6 +91,8 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
         target: usersTable.id,
         set: { name, email },
       });
+
+    await ensureMonthlyAllowance(auth.userId);
 
     if (redis) {
       // Fire-and-forget — don't make the request wait on caching its own

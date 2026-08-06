@@ -130,7 +130,7 @@ export default function TermsPage() {
               5. Plans, billing, and refunds
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed">
-              EchoMind offers a free tier (limited minutes) and paid plans that credit your account with a set number of voice-session minutes for a one-time payment, processed securely via Razorpay:
+              EchoMind offers a free tier with a monthly voice-time allowance and paid monthly plans processed securely via Razorpay:
             </p>
 
             {/* Plans Table */}
@@ -140,29 +140,34 @@ export default function TermsPage() {
                   <tr>
                     <th className="px-4 py-3 border-b border-white/10">Plan</th>
                     <th className="px-4 py-3 border-b border-white/10">Price</th>
-                    <th className="px-4 py-3 border-b border-white/10">Minutes Credited</th>
+                    <th className="px-4 py-3 border-b border-white/10">Monthly Minutes</th>
+                    <th className="px-4 py-3 border-b border-white/10">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Free</td>
                     <td className="px-4 py-3">₹0</td>
-                    <td className="px-4 py-3">5 minutes</td>
+                    <td className="px-4 py-3">10 minutes</td>
+                    <td className="px-4 py-3">Active</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-3 font-semibold text-white">Basic</td>
-                    <td className="px-4 py-3">₹249</td>
-                    <td className="px-4 py-3">30 minutes</td>
+                    <td className="px-4 py-3 font-semibold text-white">Starter</td>
+                    <td className="px-4 py-3">₹399/month</td>
+                    <td className="px-4 py-3">20 minutes</td>
+                    <td className="px-4 py-3">Purchasable</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-semibold text-white">Growth</td>
+                    <td className="px-4 py-3">₹799/month</td>
+                    <td className="px-4 py-3">40 minutes</td>
+                    <td className="px-4 py-3">Coming soon</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Pro</td>
-                    <td className="px-4 py-3">₹499</td>
-                    <td className="px-4 py-3">60 minutes</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 font-semibold text-white">Premium</td>
-                    <td className="px-4 py-3">₹999</td>
-                    <td className="px-4 py-3">120 minutes</td>
+                    <td className="px-4 py-3">₹1,499/month</td>
+                    <td className="px-4 py-3">75 minutes</td>
+                    <td className="px-4 py-3">Coming soon</td>
                   </tr>
                 </tbody>
               </table>
@@ -170,13 +175,13 @@ export default function TermsPage() {
 
             <ul className="list-disc pl-6 space-y-2 text-gray-300 text-sm">
               <li>
-                <strong className="text-white">One-Time Purchases:</strong> These are one-time payments for a specific number of call minutes. They are not recurring subscriptions, and you will not be auto-billed.
+                <strong className="text-white">Monthly Allowances:</strong> Free and paid plan allowances reset once per calendar month. Starter is currently the only paid plan available for purchase.
               </li>
               <li>
-                <strong className="text-white">Expiry:</strong> Purchased minutes do not expire unless explicitly stated otherwise at the time of purchase.
+                <strong className="text-white">Coming Soon Plans:</strong> Growth and Pro are shown for visibility, but they are not purchasable until they are officially launched.
               </li>
               <li>
-                <strong className="text-white">Refunds:</strong> Since voice-session minutes are digital goods credited immediately to your account upon purchase, all payments are non-refundable once the minutes have been credited, except where required by applicable law (such as under consumer protection regulations in India) or if a technical error occurred on our part during the billing process. If you believe you were charged in error, please contact <a href="mailto:support@echomind.ai" className="text-teal-400 hover:underline">support@echomind.ai</a> within 7 days of the transaction.
+                <strong className="text-white">Refunds:</strong> Subscription payments are non-refundable once the monthly allowance has been activated, except where required by applicable law (such as under consumer protection regulations in India) or if a technical error occurred on our part during the billing process. If you believe you were charged in error, please contact <a href="mailto:support@echomind.ai" className="text-teal-400 hover:underline">support@echomind.ai</a> within 7 days of the transaction.
               </li>
             </ul>
           </section>

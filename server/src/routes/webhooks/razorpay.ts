@@ -2,8 +2,8 @@ import { Router } from "express";
 import crypto from "crypto";
 import { db } from "../../config/db";
 import { usersTable, processedPaymentsTable } from "../../config/schema";
-import { eq, sql } from "drizzle-orm";
-import { PLANS, type PlanKey } from "../../config/plans";
+import { eq } from "drizzle-orm";
+import { PLANS, isPurchasablePlan, type PlanKey } from "../../config/plans";
 import { getRedis } from "../../lib/redis";
 import { trackServer } from "../../lib/analytics";
 
@@ -52,6 +52,11 @@ router.post("/", async (req, res) => {
       return res.status(200).json({ received: true }); // 200 so Razorpay doesn't retry
     }
 
+    if (!isPurchasablePlan(plan)) {
+      console.warn("[razorpay-webhook] Ignoring non-purchasable plan in payload:", { userId, plan, paymentId });
+      return res.status(200).json({ received: true });
+    }
+
     const planData = PLANS[plan];
 
     // ✅ Idempotency gate — atomic at the DB level. If this payment ID was
@@ -77,15 +82,16 @@ router.post("/", async (req, res) => {
     await db.update(usersTable)
       .set({
         plan,
-        minutesRemaining: sql`${usersTable.minutesRemaining} + ${planData.minutes}`,
-        minutesTotal: sql`${usersTable.minutesTotal}     + ${planData.minutes}`,
+        minutesRemaining: planData.minutes,
+        minutesTotal: planData.minutes,
+        minuteAllowanceResetAt: new Date(),
       })
       .where(eq(usersTable.id, userId));
 
     trackServer("payment_captured_server", userId, {
       plan,
       amount: body.payload?.payment?.entity?.amount,
-      minutesAdded: planData.minutes,
+      monthlyAllowance: planData.minutes,
     });
 
     // Invalidate Redis balance cache
@@ -94,7 +100,7 @@ router.post("/", async (req, res) => {
       await redis.del(`user:${userId}:balance`).catch(() => { });
     }
 
-    console.log(`[razorpay-webhook] +${planData.minutes} min → user ${userId} (${plan})`);
+    console.log(`[razorpay-webhook] ${planData.minutes} min monthly allowance → user ${userId} (${plan})`);
   }
 
   res.status(200).json({ received: true });

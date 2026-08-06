@@ -11,7 +11,7 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'chat', label: 'Echo', icon: MessageCircle },
     { id: 'history', label: 'History', icon: History },
-    { id: 'sessions', label: 'Premium', icon: Star },
+    { id: 'sessions', label: 'Plans', icon: Star },
   ];
 
   return (

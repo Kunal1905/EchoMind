@@ -5,7 +5,7 @@ import { perUserLimit } from "../middleware/per-user-rate-limit";
 import {
   killSwitchGuard,
   callStartRateLimit,
-  dailyMinuteCapGuard,
+  monthlyMinuteAllowanceGuard,
 } from "../middleware/cost-guard";
 import { db } from "../config/db";
 import { dbPooled } from "../config/db-pooled";
@@ -13,6 +13,7 @@ import { usersTable, sessionChatTable, moodEntriesTable } from "../config/schema
 import { eq, desc } from "drizzle-orm";
 import { getRedis } from "../lib/redis";
 import { LanguageCode, SUPPORTED_LANGUAGES } from "../config/languages";
+import { PLANS } from "../config/plans";
 
 const router = Router();
 
@@ -125,7 +126,7 @@ router.post("/",
   requireUser,
   killSwitchGuard,
   callStartRateLimit,
-  dailyMinuteCapGuard,
+  monthlyMinuteAllowanceGuard,
   perUserLimit({ windowSec: 30, max: 2, key: "vapi-token" }),
   async (req: AuthedRequest, res) => {
     try {
@@ -154,7 +155,7 @@ router.post("/",
         getMoodTrendSafe(userId),
       ]);
       const balance = balanceData.minutesRemaining;
-      const freeTrialLimit = 5;
+      const freeTrialLimit = PLANS.free.minutes;
       const freeTrialUsed = balanceData.plan === "free"
         ? Math.min(freeTrialLimit, Math.max(0, freeTrialLimit - balance))
         : freeTrialLimit;

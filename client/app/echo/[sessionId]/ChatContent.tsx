@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Clock, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, CreditCard, Info, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
@@ -84,12 +84,25 @@ const getErrorMessage = (error: unknown) => {
   return JSON.stringify(error);
 };
 
+function SessionHeadsUpNote() {
+  return (
+    <div className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-relaxed text-[--color-ash-gray]">
+      <Info className="mt-0.5 shrink-0 text-[--color-electric-iris]" size={15} />
+      <p>
+        Every Echo chat includes a spoken heads-up when about 1 minute remains,
+        then wraps up gently. EchoMind can make mistakes; verify anything
+        important.
+      </p>
+    </div>
+  );
+}
+
 export function ChatContent({
   onNavigate = () => { },
   isPremium = false,
   premiumCalls = 0,
   freeTrialUsed = 0,
-  freeTrialLimit = 5,
+  freeTrialLimit = 10,
   onSessionComplete = () => { },
 }: {
   onNavigate?: (page: string) => void;
@@ -197,7 +210,7 @@ export function ChatContent({
 
       // Track Session Started in PostHog
       posthog.capture("session_started", {
-        plan: isPremium ? "premium" : "free",
+        plan: isPremium ? "paid" : "free",
         minutesRemaining: premiumCalls,
         hasMemory: !!consentGranted,
       });
@@ -263,7 +276,7 @@ export function ChatContent({
           // Track Session Completed in PostHog
           posthog.capture("session_completed", {
             durationSec,
-            plan: isPremium ? "premium" : "free",
+            plan: isPremium ? "paid" : "free",
             hadIntention: false,
             endSource: source,
           });
@@ -357,7 +370,7 @@ export function ChatContent({
       }
 
       posthog.capture("voice_session_soft_recovery_shown", {
-        plan: isPremium ? "premium" : "free",
+        plan: isPremium ? "paid" : "free",
         technicalMessage: technicalMessage.slice(0, 240),
       });
     };
@@ -531,6 +544,7 @@ export function ChatContent({
     setMessages([]);
     messagesRef.current = [];
     setSessionTime(0);
+    setMaxSessionSeconds(null);
     setOneMinuteWarningShown(false);
     warningTriggeredRef.current = false;
     saveAttemptedRef.current = false;
@@ -545,8 +559,8 @@ export function ChatContent({
       setSessionNotice({
         title: isPremium ? "You're out of minutes" : "Your free minutes are used up",
         message: isPremium
-          ? "Your current plan has 0 minutes remaining. Add more minutes when you are ready to continue."
-          : `You have used ${latestFreeTrialUsed} of ${latestFreeTrialLimit} free minute${latestFreeTrialLimit === 1 ? "" : "s"}. Add more minutes when you are ready to continue.`,
+          ? "Your current plan has 0 minutes remaining. Choose a plan when you are ready to continue."
+          : `You have used ${latestFreeTrialUsed} of ${latestFreeTrialLimit} free minute${latestFreeTrialLimit === 1 ? "" : "s"}. Choose a plan when you are ready to continue.`,
       });
     };
 
@@ -561,7 +575,7 @@ export function ChatContent({
       if (tokenRes.status === 402) {
         // Track minutes exhausted in PostHog
         posthog.capture("minutes_exhausted", {
-          plan: isPremium ? "premium" : "free",
+          plan: isPremium ? "paid" : "free",
           minutesUsed: freeTrialUsed,
         });
 
@@ -615,7 +629,7 @@ export function ChatContent({
 
       if (status === 402) {
         posthog.capture("minutes_exhausted", {
-          plan: isPremium ? "premium" : "free",
+          plan: isPremium ? "paid" : "free",
           minutesUsed: apiError.response.data?.freeTrialUsed ?? freeTrialUsed,
         });
         showNoMinutesNotice(apiError.response.data);
@@ -827,6 +841,7 @@ export function ChatContent({
                   </>
                 )}
               </div>
+              <SessionHeadsUpNote />
             </div>
           </div>
 

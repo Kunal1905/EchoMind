@@ -23,7 +23,6 @@ export async function deductMinutesForDurationDelta(
   await db.update(usersTable)
     .set({
       minutesRemaining: sql`GREATEST(${usersTable.minutesRemaining} - ${minutesToDeduct}, 0)`,
-      minutesTotal: sql`${usersTable.minutesTotal} + ${minutesToDeduct}`,
     })
     .where(eq(usersTable.id, userId));
 

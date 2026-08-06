@@ -13,6 +13,7 @@ interface PricingCardProps {
   accentRgb: string;    // e.g. "128, 82, 255"
   badge?: string;       // e.g. "🔥 MOST POPULAR"
   featured?: boolean;   // featured gets scale-105 hover and float
+  available?: boolean;
   features: string[];
   isCurrentPlan: boolean;
   onUpgrade: () => void;
@@ -30,6 +31,7 @@ export default function PricingCard({
   accentRgb,
   badge,
   featured = false,
+  available = true,
   features,
   isCurrentPlan,
   onUpgrade,
@@ -61,7 +63,7 @@ export default function PricingCard({
       }}
       viewport={{ once: true, margin: "-10% 0px" }}
       animate={
-        isHovered
+        isHovered && available
           ? { 
               y: -8, 
               scale: featured ? 1.05 : 1.02,
@@ -99,7 +101,9 @@ export default function PricingCard({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group relative rounded-3xl p-[1.5px] flex flex-col h-full overflow-hidden"
+      className={`group relative rounded-3xl p-[1.5px] flex flex-col h-full overflow-hidden ${
+        available ? "" : "opacity-70 saturate-50"
+      }`}
       style={{
         background: `rgba(255, 255, 255, ${featured ? "0.08" : "0.03"})`,
       }}
@@ -160,7 +164,9 @@ export default function PricingCard({
 
         {/* Spotlight Effect (follows mouse) */}
         <motion.div
-          className="pointer-events-none absolute -inset-px rounded-[23px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+          className={`pointer-events-none absolute -inset-px rounded-[23px] opacity-0 transition-opacity duration-300 z-10 ${
+            available ? "group-hover:opacity-100" : ""
+          }`}
           style={{
             background: useMotionTemplate`radial-gradient(320px circle at ${mouseX}px ${mouseY}px, rgba(${accentRgb}, 0.12), transparent 80%)`,
           }}
@@ -186,7 +192,7 @@ export default function PricingCard({
                 animate={isHovered ? { rotate: 15, scale: 1.05 } : { rotate: 0, scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, {
+                {React.isValidElement<{ className?: string; style?: React.CSSProperties }>(icon) ? React.cloneElement(icon, {
                   className: "w-6 h-6",
                   style: { color: accent }
                 }) : icon}
@@ -236,7 +242,7 @@ export default function PricingCard({
               </span>
             </div>
             <span className="mt-1 text-xs font-semibold tracking-wide text-neutral-400 uppercase">
-              One-time purchase
+              per month
             </span>
           </div>
 
@@ -274,7 +280,7 @@ export default function PricingCard({
               Current Plan
               <Check className="w-4 h-4 text-emerald-400" />
             </button>
-          ) : (
+          ) : available ? (
             <motion.button
               onClick={onUpgrade}
               className="w-full relative overflow-hidden py-4 rounded-xl font-extrabold text-sm tracking-wider text-white transition-all duration-300 flex items-center justify-center gap-2"
@@ -302,8 +308,15 @@ export default function PricingCard({
                   }
                 }}
               />
-              Add {minutes} minutes
+              Subscribe
             </motion.button>
+          ) : (
+            <button
+              disabled
+              className="w-full py-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 border border-white/10 bg-white/[0.04] text-neutral-500 cursor-not-allowed"
+            >
+              Coming soon
+            </button>
           )}
         </div>
       </div>
