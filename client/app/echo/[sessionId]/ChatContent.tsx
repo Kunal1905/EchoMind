@@ -767,8 +767,8 @@ export function ChatContent({
               {/* Messages Container */}
               <div className="border-t border-b void-hairline p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
                 {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                    <EchoOrb size="lg" isPulsing={isRecording} />
+                  <div className="flex min-h-[400px] flex-col items-center justify-center text-center space-y-6">
+                    <EchoOrb size="md" isPulsing={isRecording} />
                     {!isRecording && !isInitializing && (
                       <div className="flex flex-wrap justify-center gap-2 mb-5">
                         {LANGUAGES.map((l) => (
@@ -797,16 +797,25 @@ export function ChatContent({
                         ))}
                       </div>
                     )}
+                    <div className="w-full">
+                      <VapiHUD
+                        isRecording={isRecording}
+                        onToggleRecording={toggleRecording}
+                        isInitializing={isInitializing}
+                        isWaitingForAssistant={isWaitingForAssistant}
+                        isSaving={isSaving}
+                      />
+                    </div>
                     {!isRecording && premiumCalls <= 3 && premiumCalls > 0 && (
                       <p className="text-[--color-saffron-spark] text-sm text-center mb-2">
                         You have {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} left. This session will end
                         automatically when your time runs out.
                       </p>
                     )}
-                    <p className="text-[--color-silver-mist] animate-pulse text-lg">
+                    <p className="text-[--color-silver-mist] text-lg">
                       {isRecording
                         ? "Echo is listening & reflecting..."
-                        : "Press the mic when you're ready to share with Echo."}
+                        : "Choose your language, then tap the mic to start."}
                     </p>
                     <p className="text-[--color-ash-gray] text-sm max-w-md">
                       Share your thoughts and feelings freely. I&apos;m here to
@@ -879,10 +888,10 @@ export function ChatContent({
             )}
           </AnimatePresence>
 
-          {/* HUD - Now positioned below chat in the flow instead of fixed */}
+          {messages.length > 0 && (
           <div className="mt-6 w-full max-w-2xl">
             <div className="flex justify-center">
-              <div className="relative"> {/* Wrapper to contain the HUD without fixed positioning */}
+              <div className="relative w-full">
                 <VapiHUD
                   isRecording={isRecording}
                   onToggleRecording={toggleRecording}
@@ -893,6 +902,7 @@ export function ChatContent({
               </div>
             </div>
           </div>
+          )}
           <PrivacyConsentModal
             isOpen={isConsentModalOpen}
             onClose={() => setIsConsentModalOpen(false)}

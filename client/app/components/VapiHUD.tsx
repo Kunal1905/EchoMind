@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, Phone } from 'lucide-react';
-import { useState } from 'react';
 import { EASES, DURATIONS, usePrefersReducedMotion } from '../lib/motion';
 
 interface VapiHUDProps {
@@ -18,32 +17,41 @@ interface VapiHUDProps {
 export function VapiHUD({ 
   isRecording, 
   onToggleRecording, 
-  onEndCall, 
   waveformData = [0.3, 0.6, 0.4, 0.8, 0.5, 0.7, 0.3, 0.9, 0.6, 0.4],
   isWaitingForAssistant = false,
   isInitializing = false,
   isSaving = false
 }: VapiHUDProps) {
-  const [showWaveform, setShowWaveform] = useState(true);
   const prefersReduced = usePrefersReducedMotion();
+  const isBusy = isWaitingForAssistant || isInitializing || isSaving;
 
   const hudTransition = prefersReduced 
     ? { duration: 0 } 
     : { ease: EASES.smooth, duration: DURATIONS.slow };
 
+  const actionLabel = isSaving
+    ? "Saving session"
+    : isInitializing
+    ? "Preparing session"
+    : isWaitingForAssistant
+    ? "Echo is listening"
+    : isRecording
+    ? "End session"
+    : "Start voice session";
+
   return (
     <motion.div
-      className="relative z-10"
+      className="relative z-10 w-full"
       initial={prefersReduced ? { opacity: 0 } : { y: 60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={prefersReduced ? { opacity: 0 } : { y: 60, opacity: 0 }}
       transition={hudTransition}
     >
-      <div className="bg-black border border-white/15 rounded-3xl px-8 py-6 md:shadow-none">
-        <div className="flex flex-col items-center gap-4">
+      <div className="mx-auto w-full max-w-sm">
+        <div className="flex flex-col items-center gap-5">
           {/* Waveform visualization */}
           <AnimatePresence>
-            {showWaveform && isRecording && (
+            {isRecording && (
               <motion.div
                 className="flex items-center gap-1 h-16"
                 initial={prefersReduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
@@ -73,61 +81,79 @@ export function VapiHUD({
           </AnimatePresence>
 
           {/* Single Control button */}
-          <div className="flex items-center gap-4">
-            {/* Unified Toggle button */}
-            <motion.button
-              onClick={onToggleRecording}
-              disabled={isWaitingForAssistant || isInitializing || isSaving}
-              className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                isRecording 
-                  ? 'bg-red-500' 
-                  : 'bg-[--color-electric-iris]'
-              } ${(isWaitingForAssistant || isInitializing || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              whileHover={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 1.1 }}
-              whileTap={prefersReduced || isWaitingForAssistant || isInitializing || isSaving ? {} : { scale: 0.95 }}
-              transition={{ ease: EASES.smooth, duration: DURATIONS.base }}
-              aria-label={isRecording ? 'End call' : 'Start call'}
-            >
-              {isInitializing || isSaving ? (
-                // Show loader when initializing or saving
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : isRecording ? (
-                <Phone className="text-white rotate-135" size={28} />
-              ) : (
-                <Mic className="text-white" size={28} />
-              )}
-              
-              {/* Pulse effect when recording - entirely hidden for reduced motion */}
-              {isRecording && !isWaitingForAssistant && !isInitializing && !isSaving && !prefersReduced && (
-                <>
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-red-400"
-                    animate={{
-                      scale: [1, 1.5],
-                      opacity: [0.6, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: 'easeOut'
-                    }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-red-400"
-                    animate={{
-                      scale: [1, 1.5],
-                      opacity: [0.6, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: 'easeOut',
-                      delay: 0.5
-                    }}
-                  />
-                </>
-              )}
-            </motion.button>
+          <motion.button
+            onClick={onToggleRecording}
+            disabled={isBusy}
+            className={`group relative flex h-28 w-28 items-center justify-center rounded-full border transition-all sm:h-32 sm:w-32 ${
+              isRecording
+                ? 'border-red-300/70 bg-red-500 text-white shadow-[0_0_48px_rgba(239,68,68,0.45)]'
+                : 'border-violet-200/70 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-teal-400 text-white shadow-[0_0_64px_rgba(128,82,255,0.55)]'
+            } ${isBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:shadow-[0_0_82px_rgba(128,82,255,0.72)]'}`}
+            whileHover={prefersReduced || isBusy ? {} : { scale: 1.06 }}
+            whileTap={prefersReduced || isBusy ? {} : { scale: 0.96 }}
+            transition={{ ease: EASES.smooth, duration: DURATIONS.base }}
+            aria-label={isRecording ? 'End voice session' : 'Start voice session'}
+          >
+            {!isRecording && !isBusy && !prefersReduced && (
+              <>
+                <motion.div
+                  className="absolute inset-0 rounded-full border border-violet-300/60"
+                  animate={{ scale: [1, 1.28], opacity: [0.5, 0] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-full border border-teal-200/50"
+                  animate={{ scale: [1, 1.42], opacity: [0.35, 0] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.45 }}
+                />
+              </>
+            )}
+            {isInitializing || isSaving ? (
+              <div className="h-9 w-9 rounded-full border-[3px] border-white border-t-transparent animate-spin" />
+            ) : isRecording ? (
+              <Phone className="relative z-10 rotate-135 text-white" size={42} />
+            ) : (
+              <Mic className="relative z-10 text-white" size={46} />
+            )}
+
+            {isRecording && !isBusy && !prefersReduced && (
+              <>
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-red-300"
+                  animate={{
+                    scale: [1, 1.35],
+                    opacity: [0.55, 0]
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeOut'
+                  }}
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-red-300"
+                  animate={{
+                    scale: [1, 1.35],
+                    opacity: [0.55, 0]
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeOut',
+                    delay: 0.5
+                  }}
+                />
+              </>
+            )}
+          </motion.button>
+
+          <div className="text-center">
+            <p className="text-base font-semibold text-white">{actionLabel}</p>
+            {!isRecording && !isBusy && (
+              <p className="mt-1 text-sm text-[--color-ash-gray]">
+                Tap the mic to begin talking with Echo.
+              </p>
+            )}
           </div>
 
           {/* Status indicator */}

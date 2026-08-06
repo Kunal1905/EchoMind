@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "motion/react";
-import { Clock, Crown, Timer, Zap } from "lucide-react";
+import { Clock, Crown, Mic, Timer } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DisclaimerModal } from "../components/DisclaimerModal";
 import { useRouter } from "next/navigation";
@@ -391,10 +391,17 @@ export default function HomeContent({
             <div ref={ctaRef} className="mt-10 flex flex-wrap items-center gap-5">
               <button
                 onClick={() => handleNavigation("chat")}
-                className="void-pill"
+                className="group inline-flex min-h-14 items-center gap-3 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-teal-400 px-7 py-3 text-base font-semibold text-white shadow-[0_0_42px_rgba(128,82,255,0.42)] transition-all hover:scale-[1.02] hover:shadow-[0_0_58px_rgba(128,82,255,0.6)]"
               >
-                <Zap size={16} />
-                Start session
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/18">
+                  <Mic size={19} />
+                </span>
+                <span className="flex flex-col items-start leading-tight">
+                  <span>Start voice session</span>
+                  <span className="text-xs font-medium text-white/75">
+                    {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""} available
+                  </span>
+                </span>
               </button>
               <button
                 onClick={() => handleNavigation("history")}
