@@ -17,6 +17,7 @@ import vapiWebhookRouter from "./routes/webhooks/vapi";
 import razorpayWebhookRouter from "./routes/webhooks/razorpay";
 import summarizeQueueRouter from "./queue/summarize";
 import myDataRouter from "./routes/my-data"
+import { ensureSchemaCompatibility } from "./lib/ensureSchemaCompatibility";
 
 const REQUIRED = ["CLERK_SECRET_KEY", "DATABASE_URL"];
 for (const key of REQUIRED) {
@@ -154,6 +155,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: "An unexpected error occurred" });
 });
 
-app.listen(port, () => {
-  console.log(`EchoMind API listening on http://localhost:${port}`);
-});
+ensureSchemaCompatibility()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`EchoMind API listening on http://localhost:${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error("[startup] Failed to verify database schema:", error);
+    process.exit(1);
+  });
