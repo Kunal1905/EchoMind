@@ -354,10 +354,10 @@ export default function HomeContent({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/*  HERO SECTION                                                      */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden pt-24">
-        <div className="void-section grid min-h-[calc(100vh-88px)] items-center gap-10 md:grid-cols-[0.95fr_1.05fr]">
+      <section className="relative overflow-hidden pt-20 md:pt-16">
+        <div className="mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-7xl items-center gap-8 px-[clamp(18px,5vw,72px)] py-8 md:grid-cols-[0.9fr_1.1fr] md:py-10">
           {/* Hero text column */}
-          <div className="relative z-10" ref={headlineParallaxRef}>
+          <div className="relative z-10 md:self-center" ref={headlineParallaxRef}>
             {/* Kicker — simple opacity/y animation */}
             <motion.div
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
@@ -374,7 +374,7 @@ export default function HomeContent({
             </motion.div>
 
             {/* Headline with word-split animation */}
-            <h1 ref={headlineRef} className="void-display max-w-[720px] word-split">
+            <h1 ref={headlineRef} className="void-display max-w-[620px] text-[52px] sm:text-[68px] lg:text-[88px] word-split">
               {splitWords("Give your mind a place to speak.")}
             </h1>
 
@@ -421,12 +421,12 @@ export default function HomeContent({
               duration: prefersReducedMotion ? 0 : 1.1,
               ease: EASES.smooth,
             }}
-            className="relative min-h-[320px] overflow-hidden md:min-h-[590px]"
+            className="relative min-h-[320px] overflow-hidden md:h-[min(58vh,520px)] md:min-h-[430px] md:self-center"
             ref={constellationParallaxRef}
           >
             <ConstellationField density="hero" className="opacity-95" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[58%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
-            <p className="absolute bottom-8 left-1/2 w-full max-w-sm -translate-x-1/2 text-center text-sm font-light leading-relaxed text-[--color-ash-gray]">
+            <div className="pointer-events-none absolute left-1/2 top-[46%] h-[56%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
+            <p className="absolute bottom-4 left-1/2 w-full max-w-sm -translate-x-1/2 text-center text-sm font-light leading-relaxed text-[--color-ash-gray] md:bottom-6">
               A living map of reflection: thoughts, mood check-ins, and
               summaries forming a calmer memory over time.
             </p>
