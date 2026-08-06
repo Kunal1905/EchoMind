@@ -341,37 +341,45 @@ export function SettingsContent({ onNavigate }: SettingsContentProps) {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                  <div className="relative h-11 w-24">
+                    <Switch
+                      checked={data.account.memoryConsent}
+                      onCheckedChange={(checked) => void handleToggleConsent(checked)}
+                      disabled={savingConsent}
+                      aria-label="Toggle personalized AI memory consent"
+                      className="peer h-11 w-24 rounded-full border-2 border-white/20 shadow-lg shadow-black/30 data-[state=checked]:border-emerald-300/70 data-[state=checked]:bg-emerald-500 data-[state=unchecked]:border-white/25 data-[state=unchecked]:bg-zinc-800 disabled:opacity-70 [&_[data-slot=switch-thumb]]:size-8 [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:shadow-md [&_[data-slot=switch-thumb]]:shadow-black/40 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-[52px] [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-1"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs font-bold uppercase tracking-wide text-white/45 peer-data-[state=unchecked]:text-white">
+                      Off
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold uppercase tracking-wide text-white/45 peer-data-[state=checked]:text-white">
+                      On
+                    </span>
+                    {savingConsent && (
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/35 backdrop-blur-[1px]">
+                        <Loader2 className="animate-spin text-white" size={18} />
+                      </span>
+                    )}
+                  </div>
                   <span
-                    className={`inline-flex min-w-[5.5rem] items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                      data.account.memoryConsent
-                        ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40"
-                        : "bg-zinc-800/80 text-zinc-400 ring-1 ring-zinc-600/60"
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                      data.account.memoryConsent ? "text-emerald-300" : "text-zinc-400"
                     }`}
                     aria-live="polite"
                   >
-                    {savingConsent ? (
-                      <Loader2 className="animate-spin" size={14} />
-                    ) : data.account.memoryConsent ? (
+                    {data.account.memoryConsent ? (
                       <>
                         <CheckCircle2 size={14} />
-                        On
+                        Memory enabled
                       </>
                     ) : (
                       <>
                         <EyeOff size={14} />
-                        Off
+                        Memory disabled
                       </>
                     )}
                   </span>
-
-                  <Switch
-                    checked={data.account.memoryConsent}
-                    onCheckedChange={(checked) => void handleToggleConsent(checked)}
-                    disabled={savingConsent}
-                    aria-label="Toggle personalized AI memory consent"
-                    className="h-8 w-14 border border-white/10 data-[state=checked]:bg-violet-600 data-[state=unchecked]:bg-zinc-700 [&_[data-slot=switch-thumb]]:size-6 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-[calc(100%-4px)]"
-                  />
                 </div>
               </div>
 
