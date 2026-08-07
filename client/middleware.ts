@@ -26,8 +26,8 @@ function addCspHeaders(response: NextResponse, nonce: string, pathname = ""): Ne
   const clerkProtectSrc = "https://*.protect.clerk.com";
   const sentrySrc = "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
   const isAuthFlow = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
-  let connectSrc = `connect-src 'self' https://echomind-ig0h.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} ${sentrySrc} https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://app.posthog.com https://us.i.posthog.com`;
-  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://app.posthog.com https://us.i.posthog.com`;
+  let connectSrc = `connect-src 'self' https://echomind-ig0h.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} ${sentrySrc} https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://*.posthog.com`;
+  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://*.posthog.com`;
 
   if (process.env.NODE_ENV !== "production") {
     // Allow any localhost/127.0.0.1 port for local development APIs and Hot Module Replacement
@@ -103,9 +103,9 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Keep Sentry's tunnel outside Clerk middleware so events can be relayed unchanged.
+    // Keep analytics tunnels outside Clerk middleware so events can be relayed unchanged.
     // Match all other request paths except static files (JS/CSS under _next/static, images, icons, etc.)
     // This guarantees non-existent asset requests (like /404javascript.js) trigger middleware and receive CSP headers.
-    '/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!monitoring|pulse|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
