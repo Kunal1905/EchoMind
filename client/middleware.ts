@@ -103,8 +103,9 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Match all request paths except static files (JS/CSS under _next/static, images, icons, etc.)
+    // Keep Sentry's tunnel outside Clerk middleware so events can be relayed unchanged.
+    // Match all other request paths except static files (JS/CSS under _next/static, images, icons, etc.)
     // This guarantees non-existent asset requests (like /404javascript.js) trigger middleware and receive CSP headers.
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
