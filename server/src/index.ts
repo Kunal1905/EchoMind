@@ -1,4 +1,5 @@
-import "dotenv/config";
+import "./instrument";
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import express from "express";
 import { clerkMiddleware } from "@clerk/express";
@@ -132,6 +133,16 @@ app.use("/api/generate-summary", strictLimit);
 //Health check 
 app.get("/health", (_req, res) => { res.json({ ok: true }); });
 
+// Temporary, token-protected endpoint for verifying production Sentry delivery.
+app.get("/debug-sentry", (req, res, next) => {
+  const expectedToken = process.env.SENTRY_TEST_TOKEN;
+  if (!expectedToken || req.get("x-sentry-test-token") !== expectedToken) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
+  return next(new Error("EchoMind server Sentry verification error"));
+});
+
 // API routes
 app.use("/api/session-chat", sessionChatRouter);
 app.use("/api/history", historyRouter);
@@ -149,6 +160,9 @@ app.use("/api/webhooks/razorpay", razorpayWebhookRouter);
 // Queue (QStash callbacks)
 app.use("/api/queue/summarize", summarizeQueueRouter);
 
+// Sentry must be registered after controllers and before other error middleware.
+Sentry.setupExpressErrorHandler(app);
+
 // ✅ Global error handler — prevents internal errors reaching the client
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[unhandled]", err?.message || err);
@@ -161,7 +175,9 @@ ensureSchemaCompatibility()
       console.log(`EchoMind API listening on http://localhost:${port}`);
     });
   })
-  .catch((error) => {
+  .catch(async (error) => {
+    Sentry.captureException(error);
     console.error("[startup] Failed to verify database schema:", error);
+    await Sentry.flush(2000);
     process.exit(1);
   });
