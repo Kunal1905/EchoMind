@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { MessageCircle, Sparkles } from "lucide-react";
 import ConstellationField from "./ConstellationField";
 import { DisclaimerModal } from "./DisclaimerModal";
@@ -16,8 +17,7 @@ const navRoutes: Record<string, string> = {
   settings: "/settings",
 };
 
-const quickLinks = [
-  { label: "Create account", href: "/sign-up" },
+const publicQuickLinks = [
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
   { label: "Copyright", href: "/copyright" },
@@ -68,12 +68,22 @@ export default function NotFoundContent() {
             <Link href="/" className={`void-pill min-h-12 ${focusStyles}`}>
               Return home
             </Link>
-            <Link
-              href="/sign-in"
-              className={`void-ghost inline-flex min-h-12 items-center justify-center px-5 ${focusStyles}`}
-            >
-              Sign in to EchoMind
-            </Link>
+            <SignedIn>
+              <Link
+                href="/echo/new"
+                className={`void-ghost inline-flex min-h-12 items-center justify-center px-5 ${focusStyles}`}
+              >
+                Start a conversation
+              </Link>
+            </SignedIn>
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className={`void-ghost inline-flex min-h-12 items-center justify-center px-5 ${focusStyles}`}
+              >
+                Sign in to EchoMind
+              </Link>
+            </SignedOut>
           </div>
 
           <nav
@@ -82,7 +92,23 @@ export default function NotFoundContent() {
           >
             <p className="void-kicker mb-5">Or explore</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-4">
-              {quickLinks.map((link) => (
+              <SignedIn>
+                <Link
+                  href="/history"
+                  className={`text-xs font-semibold uppercase tracking-[0.12em] text-[--color-ash-gray] underline-offset-4 transition-colors hover:text-white hover:underline ${focusStyles}`}
+                >
+                  View history
+                </Link>
+              </SignedIn>
+              <SignedOut>
+                <Link
+                  href="/sign-up"
+                  className={`text-xs font-semibold uppercase tracking-[0.12em] text-[--color-ash-gray] underline-offset-4 transition-colors hover:text-white hover:underline ${focusStyles}`}
+                >
+                  Create account
+                </Link>
+              </SignedOut>
+              {publicQuickLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
