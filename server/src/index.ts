@@ -51,7 +51,6 @@ app.use(compression());
 
 const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "";
 const productionOrigins = [
-  "https://echo-mind-ncns-three.vercel.app",
   "https://www.echomind.co.in",
   "https://echomind.co.in",
 ];

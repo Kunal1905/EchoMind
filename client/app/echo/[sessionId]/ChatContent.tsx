@@ -66,6 +66,14 @@ type ApiErrorLike = {
   };
 };
 
+const isDevelopment = process.env.NODE_ENV !== "production";
+const debugWarn = (...args: unknown[]) => {
+  if (isDevelopment) console.warn(...args);
+};
+const debugError = (...args: unknown[]) => {
+  if (isDevelopment) console.error(...args);
+};
+
 const getErrorMessage = (error: unknown) => {
   if (typeof error === "string") return error;
   if (!error || typeof error !== "object") return String(error);
@@ -256,13 +264,6 @@ export function ChatContent({
           ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
           : sessionTime;
 
-        console.log(`[${source}] saving session:`, {
-          messagesCaptured: messagesRef.current.length,
-          notesLength: notes.length,
-          durationSec,
-          sessionId: sessionIdRef.current,
-        });
-
         const response = await api.post("/session-chat", {
           sessionId: sessionIdRef.current,
           notes,
@@ -270,9 +271,8 @@ export function ChatContent({
         });
 
         if (response.status !== 200 && response.status !== 201) {
-          console.error(`[${source}] Save failed:`, response.status, response.data);
+          if (isDevelopment) debugError(`[${source}] Save failed:`, response.status);
         } else {
-          console.log(`[${source}] session saved OK`);
           // Track Session Completed in PostHog
           posthog.capture("session_completed", {
             durationSec,
@@ -291,7 +291,7 @@ export function ChatContent({
         }
 
       } catch (e) {
-        console.error("Save failed", e);
+        if (isDevelopment) debugError("Save failed", e);
       } finally {
         setIsSaving(false);
         sessionIdRef.current = null;
@@ -376,20 +376,14 @@ export function ChatContent({
     };
 
     const onError = async (error: unknown) => {
-      console.error("VAPI Error:", error);
-      console.error("FULL ERROR", error);
+      if (isDevelopment) debugError("VAPI error", error);
       const errorDetails = (error && typeof error === "object" ? error : {}) as VapiErrorLike;
       let serializedError = "";
       try {
         serializedError = JSON.stringify(error) || "";
-        console.error("JSON", JSON.stringify(error, null, 2));
       } catch {
         serializedError = String(error);
-        console.error("JSON", serializedError);
       }
-      console.error("message", errorDetails.message);
-      console.error("status", errorDetails.status);
-      console.error("response", errorDetails.response);
       const errorMessage = getErrorMessage(error);
 
       const lowerErrorMessage = errorMessage.toLowerCase();
@@ -438,7 +432,7 @@ export function ChatContent({
         lowerErrorMessage.includes("temporarily");
 
       if (isActiveSession && isLikelyProviderHiccup) {
-        console.warn("[vapi] Soft recovery shown instead of raw error:", errorMessage);
+        if (isDevelopment) debugWarn("[vapi] Soft recovery shown instead of raw error");
         showSoftVoiceRecovery(errorMessage);
         return;
       }
@@ -449,22 +443,22 @@ export function ChatContent({
 
       // Provide more user-friendly error messages based on the error content
       if (lowerErrorMessage.includes("assistant not found")) {
-        console.error("Assistant configuration error. Please verify your assistant ID is correct and properly configured in the VAPI dashboard.");
+        if (isDevelopment) debugError("Assistant configuration error");
         alert("Assistant configuration error. Please contact support to resolve this issue.");
       } else if (lowerErrorMessage.includes("400")) {
-        console.error("Bad request error. This may be due to an invalid assistant configuration.", errorMessage);
-        alert("Configuration error (Vapi 400): " + errorMessage.slice(0, 400) + "\n\nOpen the browser console and share the 'FULL ERROR' / 'JSON' Vapi logs for the exact rejected field.");
+        if (isDevelopment) debugError("Bad request from VAPI");
+        alert("Configuration error (Vapi 400): " + errorMessage.slice(0, 400));
       } else if (lowerErrorMessage.includes("401") || lowerErrorMessage.includes("unauthorized")) {
-        console.error("Authentication error. Please verify your API key is correct and has proper permissions.");
+        if (isDevelopment) debugError("VAPI authentication error");
         alert("Authentication error. Please verify your API key is correct.");
       } else if (lowerErrorMessage.includes("403")) {
-        console.error("Access forbidden. Please check your VAPI account permissions.");
+        if (isDevelopment) debugError("VAPI access forbidden");
         alert("Access error. Please check your account permissions.");
       } else if (isActiveSession) {
-        console.warn("[vapi] Unclassified active-session error shown softly:", errorMessage);
+        if (isDevelopment) debugWarn("[vapi] Unclassified active-session error shown softly");
         showSoftVoiceRecovery(errorMessage);
       } else {
-        console.error("An unexpected error occurred:", errorMessage);
+        if (isDevelopment) debugError("Unexpected VAPI error", errorMessage);
         alert(`An error occurred: ${errorMessage}`);
       }
     };
@@ -516,7 +510,7 @@ export function ChatContent({
   const toggleRecording = () => {
     const vapi = vapiRef.current;
     if (!vapi || !isVapiClientReady()) {
-      console.error("VAPI client not initialized or missing API key");
+      if (isDevelopment) debugError("VAPI client not initialized or missing API key");
       alert("VAPI client not ready. Please check your configuration.");
       return;
     }
@@ -597,13 +591,6 @@ export function ChatContent({
       const vapi = vapiRef.current;
       if (!vapi) throw new Error("Vapi not initialized");
 
-      console.log(
-        "Starting Vapi assistant:",
-        assistantId,
-        "with overrides:",
-        JSON.stringify(assistantOverrides, null, 2)
-      );
-
       // ✅ Start via the dashboard assistant (voice comes from there) + dynamic overrides
       vapi.start(assistantId, assistantOverrides);
 
@@ -614,7 +601,7 @@ export function ChatContent({
 
       // No response at all = network/CORS failure, not a server error
       if (!apiError.response) {
-        console.error("[startVoiceSession] Network/CORS error:", apiError.message);
+        if (isDevelopment) debugError("[startVoiceSession] Network/CORS error", apiError.message);
         alert(
           "Couldn't reach the server. This usually means one of:\n" +
           "• The server is still starting up (free hosting spins down when idle — wait ~30s and retry)\n" +
@@ -649,13 +636,13 @@ export function ChatContent({
       if (status === 500 || status === 503) {
         const serverError = apiError.response.data?.error || "The server could not prepare the call.";
         const serverCode = apiError.response.data?.code;
-        console.error("[startVoiceSession] Server error:", status, apiError.response.data);
+        if (isDevelopment) debugError("[startVoiceSession] Server error", status);
         alert(serverCode ? `${serverError}\n\nCode: ${serverCode}` : serverError);
         return;
       }
 
       // Genuine server error — log full details for debugging, show generic message to user
-      console.error("[startVoiceSession] Server error:", status, apiError.response.data);
+      if (isDevelopment) debugError("[startVoiceSession] Server error", status);
       alert("Something went wrong starting your session. Please try again in a moment.");
     }
   };

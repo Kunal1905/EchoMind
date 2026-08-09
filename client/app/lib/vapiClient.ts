@@ -1,46 +1,31 @@
-// app/lib/vapiClient.ts
 import Vapi from "@vapi-ai/web";
 
-if (!process.env.NEXT_PUBLIC_VAPI_API_KEY) {
-  console.error("❌ Missing: NEXT_PUBLIC_VAPI_API_KEY");
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+if (isDevelopment && !process.env.NEXT_PUBLIC_VAPI_API_KEY) {
+  console.error("Missing NEXT_PUBLIC_VAPI_API_KEY");
 }
 
 export const vapiClient = new Vapi(
   process.env.NEXT_PUBLIC_VAPI_API_KEY!
 );
 
-// Debug listeners (optional)
-const eventHandler = (event: string, data: any) => {
-  console.log(`⚡ VAPI EVENT: ${event}`, data);
-};
-
-// ✅ Debug listeners ONLY in development
-// volume-level fires 20x/second — never log it in production
-if (process.env.NODE_ENV === "development") {
-  vapiClient.on("call-start", () => console.log("[vapi] call-start"));
-  vapiClient.on("call-end",   () => console.log("[vapi] call-end"));
-  vapiClient.on("error", (e: any) => {
-  console.error("========== VAPI ERROR ==========");
-  console.error("Full error:", e);
-  console.error("Stringified:", JSON.stringify(e, null, 2));
-  console.error("Message:", e?.message);
-  console.error("Status:", e?.status);
-  console.error("Response:", e?.response);
-  console.error("================================");
-});
-  // volume-level intentionally excluded
+// Keep lifecycle diagnostics useful in development without logging transcripts,
+// assistant payloads, or high-frequency volume data.
+if (isDevelopment) {
+  vapiClient.on("call-start", () => console.debug("[vapi] call-start"));
+  vapiClient.on("call-end", () => console.debug("[vapi] call-end"));
+  vapiClient.on("speech-start", () => console.debug("[vapi] speech-start"));
+  vapiClient.on("speech-end", () => console.debug("[vapi] speech-end"));
+  vapiClient.on("error", (error: { message?: unknown; status?: unknown; type?: unknown }) => {
+    console.error("[vapi] error", {
+      message: error?.message,
+      status: error?.status,
+      type: error?.type,
+    });
+  });
 }
 
-
-vapiClient.on("call-start", () => eventHandler("call-start", undefined));
-vapiClient.on("call-end", () => eventHandler("call-end", undefined));
-vapiClient.on("message", (m) => eventHandler("message", m));
-vapiClient.on("error", (e) => eventHandler("error", e));
-vapiClient.on("speech-start", () => eventHandler("speech-start", undefined));
-vapiClient.on("speech-end", () => eventHandler("speech-end", undefined));
-vapiClient.on("volume-level", (v) => eventHandler("volume-level", v));
-
-// Add a method to check if the client is ready
 export const isVapiClientReady = () => {
   return !!process.env.NEXT_PUBLIC_VAPI_API_KEY;
 };

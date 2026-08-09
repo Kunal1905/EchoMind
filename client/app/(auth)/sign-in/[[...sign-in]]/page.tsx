@@ -1,5 +1,14 @@
 import { AuthenticateWithRedirectCallback, SignIn } from "@clerk/nextjs";
+import type { Metadata } from "next";
 import AuthLayout, { clerkAppearance } from "@/app/components/AuthLayout";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description: "Sign in to continue your private EchoMind voice reflections.",
+  alternates: {
+    canonical: "/sign-in",
+  },
+};
 
 type SignInPageProps = {
   params?: Promise<{

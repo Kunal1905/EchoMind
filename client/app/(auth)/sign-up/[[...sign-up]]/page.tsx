@@ -1,5 +1,14 @@
 import { AuthenticateWithRedirectCallback, SignUp } from "@clerk/nextjs";
+import type { Metadata } from "next";
 import AuthLayout, { clerkAppearance } from "@/app/components/AuthLayout";
+
+export const metadata: Metadata = {
+  title: "Create Account",
+  description: "Create an EchoMind account and start a private voice reflection.",
+  alternates: {
+    canonical: "/sign-up",
+  },
+};
 
 type SignUpPageProps = {
   params?: Promise<{
