@@ -137,25 +137,24 @@ router.delete("/:sessionId", requireUser, async (req: AuthedRequest, res) => {
     const userId = req.authUserId!;
 
 
-    // 1. Delete associated mood entries
-    await db
-      .delete(moodEntriesTable)
-      .where(
-        and(
-          eq(moodEntriesTable.sessionId, sessionId),
-          eq(moodEntriesTable.userId, userId)
-        )
-      );
-
-    // 2. Delete the session chat itself
-    await db
-      .delete(sessionChatTable)
-      .where(
-        and(
-          eq(sessionChatTable.sessionId, sessionId),
-          eq(sessionChatTable.createdBy, userId)
-        )
-      );
+    await Promise.all([
+      db
+        .delete(moodEntriesTable)
+        .where(
+          and(
+            eq(moodEntriesTable.sessionId, sessionId),
+            eq(moodEntriesTable.userId, userId)
+          )
+        ),
+      db
+        .delete(sessionChatTable)
+        .where(
+          and(
+            eq(sessionChatTable.sessionId, sessionId),
+            eq(sessionChatTable.createdBy, userId)
+          )
+        ),
+    ]);
 
     // Bust memory cache so deleted session no longer appears in future memory context
     const redis = getRedis();

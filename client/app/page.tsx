@@ -1,4 +1,5 @@
 import AppShell from "./AppShell";
+import { ClerkAppProvider } from "./components/ClerkAppProvider";
 
 const webApplicationJsonLd = {
   "@context": "https://schema.org",
@@ -26,7 +27,9 @@ export default function Page() {
           __html: JSON.stringify(webApplicationJsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <AppShell />
+      <ClerkAppProvider>
+        <AppShell />
+      </ClerkAppProvider>
     </>
   );
 }

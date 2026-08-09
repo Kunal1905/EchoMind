@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 // Generate a cryptographically secure nonce for CSP
 function generateNonce(): string {
@@ -18,16 +18,17 @@ const isPublicRoute = createRouteMatcher([
 const isProtectedRoute = createRouteMatcher([
   '/echo(.*)',
   '/history(.*)',
+  '/settings(.*)',
 ])
 
-function addCspHeaders(response: NextResponse, nonce: string, pathname = ""): NextResponse {
+function buildCspHeader(nonce: string | null) {
   // Dynamically configure connect-src, script-src, and frame-src for Clerk, Cloudflare Turnstile CAPTCHA, Google OAuth, custom domain, and Vapi
   const cloudflareTurnstileSrc = "https://challenges.cloudflare.com https://*.challenges.cloudflare.com";
   const clerkProtectSrc = "https://*.protect.clerk.com";
   const sentrySrc = "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
-  const isAuthFlow = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
   let connectSrc = `connect-src 'self' https://echomind-ig0h.onrender.com https://api.vapi.ai wss://api.vapi.ai https://*.vapi.ai wss://*.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} ${sentrySrc} https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com https://*.posthog.com`;
-  let scriptSrc = `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://*.posthog.com`;
+  const inlineScriptPolicy = nonce ? `'nonce-${nonce}'` : "'unsafe-inline'";
+  let scriptSrc = `script-src 'self' 'unsafe-eval' ${inlineScriptPolicy} blob: https://c.daily.co https://*.daily.co https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com ${clerkProtectSrc} https://clerk.echomind.co.in https://*.echomind.co.in https://echomind.co.in https://www.echomind.co.in ${cloudflareTurnstileSrc} https://*.posthog.com`;
 
   if (process.env.NODE_ENV !== "production") {
     // Allow any localhost/127.0.0.1 port for local development APIs and Hot Module Replacement
@@ -51,7 +52,16 @@ function addCspHeaders(response: NextResponse, nonce: string, pathname = ""): Ne
     scriptSrc,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   ];
-  const cspHeader = cspDirectives.join('; ');
+  return cspDirectives.join('; ');
+}
+
+function addCspHeaders(
+  response: NextResponse,
+  cspHeader: string,
+  pathname = "",
+  nonce?: string,
+): NextResponse {
+  const isAuthFlow = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
 
   response.headers.set('Content-Security-Policy', cspHeader);
   response.headers.set('X-Frame-Options', 'DENY');
@@ -62,10 +72,29 @@ function addCspHeaders(response: NextResponse, nonce: string, pathname = ""): Ne
   response.headers.set('Cross-Origin-Resource-Policy', isAuthFlow ? 'cross-origin' : 'same-origin');
   response.headers.set('X-DNS-Prefetch-Control', 'on');
 
-  // Pass nonce to the response so it can be used in components
-  response.headers.set('x-csp-nonce', nonce);
+  if (nonce) response.headers.set('x-csp-nonce', nonce);
 
   return response;
+}
+
+function nextResponseWithCsp(
+  req: NextRequest,
+  nonce: string,
+  pathname: string,
+  useNonce: boolean,
+) {
+  const activeNonce = useNonce ? nonce : null;
+  const cspHeader = buildCspHeader(activeNonce);
+
+  if (!useNonce) {
+    return addCspHeaders(NextResponse.next(), cspHeader, pathname);
+  }
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-csp-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", cspHeader);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  return addCspHeaders(response, cspHeader, pathname, nonce);
 }
 
 export default clerkMiddleware(async (auth, req) => {
@@ -74,6 +103,7 @@ export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
   const isClerkSsoCallback =
     pathname === "/sign-in/sso-callback" || pathname === "/sign-up/sso-callback";
+  const isAuthFlow = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
 
   // Canonicalize apex domain, but let Clerk consume OAuth callbacks on the origin that received them.
   if (host === "echomind.co.in" && !isClerkSsoCallback) {
@@ -82,7 +112,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (isPublicRoute(req)) {
-    return addCspHeaders(NextResponse.next(), nonce, pathname);
+    return nextResponseWithCsp(req, nonce, pathname, isAuthFlow);
   }
 
   // Enforce login on protected routes
@@ -94,11 +124,18 @@ export default clerkMiddleware(async (auth, req) => {
       const url = new URL('/sign-in', req.url);
       url.searchParams.set('redirect_url', req.url);
       const redirectResponse = NextResponse.redirect(url);
-      return addCspHeaders(redirectResponse, nonce, pathname);
+      return addCspHeaders(
+        redirectResponse,
+        buildCspHeader(nonce),
+        pathname,
+        nonce,
+      );
     }
+
+    return nextResponseWithCsp(req, nonce, pathname, true);
   }
 
-  return addCspHeaders(NextResponse.next(), nonce, pathname);
+  return nextResponseWithCsp(req, nonce, pathname, false);
 });
 
 export const config = {

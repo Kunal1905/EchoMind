@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Nav } from "./components/Nav";
+import { HistoryScreenSkeleton, PlansScreenSkeleton } from "./components/ScreenSkeletons";
 import api from "./lib/api";
 import { useAuth } from "@clerk/nextjs";
 
@@ -13,11 +14,11 @@ const ChatContent = dynamic(
 );
 const HistoryContent = dynamic(
   () => import("./history/HistoryContent").then((module) => module.HistoryContent),
-  { loading: AppScreenLoading }
+  { loading: HistoryScreenSkeleton }
 );
 const SessionsContent = dynamic(
   () => import("./premium/SessionsContent").then((module) => module.SessionsContent),
-  { loading: AppScreenLoading }
+  { loading: PlansScreenSkeleton }
 );
 const SettingsContent = dynamic(
   () => import("./settings/SettingsContent").then((module) => module.SettingsContent),

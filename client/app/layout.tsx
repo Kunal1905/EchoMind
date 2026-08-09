@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
-import {
-  ClerkProvider
-} from "@clerk/nextjs";
 import { Inter } from "next/font/google";
-import { headers } from "next/headers";
 import { PHProvider } from "./PHProvider";
 import "./styles/globals.css";
 
@@ -48,27 +44,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const nonce = (await headers()).get("x-csp-nonce") || "";
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      nonce={nonce}
-      appearance={{
-        variables: {
-          colorBackground: "#1e1e2e",
-          colorText: "#f5f5f5",
-          colorTextSecondary: "#a0a0b0",
-        },
-      }}
-    >
-      <html lang="en" nonce={nonce}>
-        <body className={`${inter.variable} antialiased`}>
-          <PHProvider>
-            {children}
-          </PHProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={`${inter.variable} antialiased`}>
+        <PHProvider>
+          {children}
+        </PHProvider>
+      </body>
+    </html>
   );
 }

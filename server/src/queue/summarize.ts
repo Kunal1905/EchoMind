@@ -53,15 +53,16 @@ router.post("/", async (req, res) => {
   try {
     const summary = await generateSessionSummaryWithFallback(notes);
 
-    await db.update(sessionChatTable)
-      .set({ summary, notes: null })
-      .where(eq(sessionChatTable.sessionId, sessionId));
-
-    if (moodScore) {
-      await db.insert(moodEntriesTable).values({
-        id: uuidv4(), userId, sessionId, moodScore,
-      });
-    }
+    await Promise.all([
+      db.update(sessionChatTable)
+        .set({ summary, notes: null })
+        .where(eq(sessionChatTable.sessionId, sessionId)),
+      moodScore
+        ? db.insert(moodEntriesTable).values({
+            id: uuidv4(), userId, sessionId, moodScore,
+          })
+        : Promise.resolve(),
+    ]);
 
     // Bust memory cache
     const redis = getRedis();

@@ -9,7 +9,7 @@ import api from "../lib/api";
 import { MoodChart } from "../components/MoodChart";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
-import { EchoOrb } from "../components/EchoOrb";
+import { HistoryScreenSkeleton } from "../components/ScreenSkeletons";
 import {
   Dialog,
   DialogContent,
@@ -150,14 +150,7 @@ export function HistoryContent({ onNavigate = () => { } }: { onNavigate?: (p: st
     fetchData();
   }, [isLoaded, isSignedIn, user?.id]);
 
-  if (!isLoaded) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-black gap-4 text-white">
-      <EchoOrb size="md" isPulsing={true} />
-      <p className="text-[--color-silver-mist] text-sm animate-pulse font-medium">
-        Echo is preparing your session space...
-      </p>
-    </div>
-  );
+  if (!isLoaded) return <HistoryScreenSkeleton />;
   if (!isSignedIn) return (
     <div className="void-page flex h-screen items-center justify-center px-4">
       <ConstellationField density="ambient" className="opacity-50" />
@@ -170,14 +163,7 @@ export function HistoryContent({ onNavigate = () => { } }: { onNavigate?: (p: st
       </div>
     </div>
   );
-  if (loading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-black gap-4 text-white">
-      <EchoOrb size="md" isPulsing={true} />
-      <p className="text-[--color-silver-mist] text-sm animate-pulse font-medium">
-        Echo is gathering your session reflections...
-      </p>
-    </div>
-  );
+  if (loading) return <HistoryScreenSkeleton />;
   if (error) return (
     <div className="p-8 text-red-400 bg-black min-h-screen flex items-center justify-center">
       <div className="max-w-2xl text-center">

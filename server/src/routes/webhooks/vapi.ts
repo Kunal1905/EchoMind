@@ -71,16 +71,19 @@ router.post("/", async (req, res) => {
       return res.status(200).json({ received: true });
     }
 
-    if (durationSec > 0) {
-      await recordCallUsage(userId, durationSec);
-    }
+    const usageRecording = durationSec > 0
+      ? recordCallUsage(userId, durationSec)
+      : Promise.resolve();
 
     if (sessionId && durationSec > 0) {
-      const existingSession = await db
-        .select({ durationSec: sessionChatTable.durationSec })
-        .from(sessionChatTable)
-        .where(eq(sessionChatTable.sessionId, sessionId))
-        .limit(1);
+      const [, existingSession] = await Promise.all([
+        usageRecording,
+        db
+          .select({ durationSec: sessionChatTable.durationSec })
+          .from(sessionChatTable)
+          .where(eq(sessionChatTable.sessionId, sessionId))
+          .limit(1),
+      ]);
       const previousDurationSec = existingSession[0]?.durationSec ?? 0;
       const finalDurationSec = Math.max(previousDurationSec, durationSec);
 
@@ -110,6 +113,8 @@ router.post("/", async (req, res) => {
       if (deductedMinutes > 0) {
         console.log(`[vapi-webhook] -${deductedMinutes} min from user ${userId} (${finalDurationSec}s call)`);
       }
+    } else {
+      await usageRecording;
     }
 
     // Invalidate Redis balance cache

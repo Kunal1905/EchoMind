@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import NotFoundContent from "./components/NotFoundContent";
+import { ClerkAppProvider } from "./components/ClerkAppProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function NotFound() {
-  return <NotFoundContent />;
+  return (
+    <ClerkAppProvider>
+      <NotFoundContent />
+    </ClerkAppProvider>
+  );
 }
