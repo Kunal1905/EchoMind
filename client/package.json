@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test app/echo/sessionRoute.test.ts"
+    "test": "tsx --test app/echo/*.test.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.35.5",

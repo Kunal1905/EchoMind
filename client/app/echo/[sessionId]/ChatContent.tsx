@@ -15,27 +15,17 @@ import { usePostHog } from "posthog-js/react";
 import { PrivacyConsentModal } from "../../components/PrivacyConsentModal";
 import { MoodCheckModal } from "../../components/MoodCheckModal";
 import ConstellationField from "../../components/ConstellationField";
+import {
+  applyTranscriptEvent,
+  isVapiTranscriptEvent,
+  type TranscriptMessage as Message,
+  type VapiTranscriptEvent,
+} from "../transcriptMessages";
 
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "ai";
-  timestamp: Date;
-  isLive?: boolean;
-  isSystemFallback?: boolean;
-}
 
 type VoiceRecoveryNotice = {
   title: string;
   message: string;
-};
-
-type VapiTranscriptMessage = {
-  type?: string;
-  role?: string;
-  transcriptType?: string;
-  transcript?: string;
 };
 
 type VapiErrorLike = {
@@ -303,38 +293,14 @@ export function ChatContent({
       await saveEndedSession({ source: "onCallEnd" });
     };
 
-    const onMessage = (msg: VapiTranscriptMessage) => {
-      if (msg?.type !== "transcript") return;
-
-      const sender: "user" | "ai" = msg.role === "assistant" ? "ai" : "user";
-      const isFinal = msg.transcriptType === "final";
-      const transcript = msg.transcript || "";
+    const onMessage = (msg: VapiTranscriptEvent) => {
+      if (!isVapiTranscriptEvent(msg)) return;
 
       setIsWaitingForAssistant(false);
       setVoiceRecoveryNotice(null);
 
       setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last && last.sender === sender && last.isLive) {
-          const copy = [...prev];
-          copy[copy.length - 1] = {
-            ...last,
-            text: transcript,
-            isLive: !isFinal,
-          };
-          messagesRef.current = copy;
-          return copy;
-        }
-
-        const newMessage: Message = {
-          id: `${sender}-${Date.now()}`,
-          text: transcript,
-          sender,
-          timestamp: new Date(),
-          isLive: !isFinal,
-        };
-
-        const updated = [...prev, newMessage];
+        const updated = applyTranscriptEvent(prev, msg);
         messagesRef.current = updated;
         return updated;
       });
@@ -502,7 +468,11 @@ export function ChatContent({
   /* ---------------- AUTOSCROLL (CHAT ONLY) ---------------- */
   useEffect(() => {
     if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      const latestMessage = messages[messages.length - 1];
+      messagesEndRef.current?.scrollIntoView({
+        behavior: latestMessage.isLive ? "auto" : "smooth",
+        block: "end",
+      });
     }
   }, [messages]);
 
