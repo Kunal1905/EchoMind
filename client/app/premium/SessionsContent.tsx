@@ -3,6 +3,12 @@
 import { Check, CircleMinus, Crown, MessageCircle, Sparkles, Zap } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/accordion";
 import PricingCard from "./PricingCard";
 
 type SessionsContentProps = {
@@ -127,7 +133,7 @@ const billingFaqs = [
   {
     question: "Can I cancel or request a refund?",
     answer:
-      "There is no recurring Starter debit to cancel. Payments are generally non-refundable after the allowance is activated, except where required by law or for a billing error. Contact support within 7 days if you believe you were charged incorrectly.",
+      "There is no recurring Starter debit to cancel. Payments are generally non-refundable after the allowance is activated, except where required by law or for a billing error. Keep your Razorpay receipt if you need to raise a payment dispute.",
   },
 ];
 
@@ -276,34 +282,45 @@ export function SessionsContent({
               Payment is handled by Razorpay. EchoMind never charges automatically when free minutes run out.
             </p>
           </div>
-          <div className="divide-y divide-white/10 border-t border-white/10">
-            {billingFaqs.map((faq) => (
-              <details key={faq.question} className="group py-5">
-                <summary className="cursor-pointer list-none pr-8 text-base font-semibold text-white marker:content-none">
-                  {faq.question}
-                </summary>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">{faq.answer}</p>
-              </details>
+          <Accordion
+            type="single"
+            collapsible
+            className="border-t border-white/10"
+            aria-label="Billing questions"
+          >
+            {billingFaqs.map((faq, index) => (
+              <AccordionItem
+                key={faq.question}
+                value={`billing-faq-${index + 1}`}
+                className="border-white/10"
+              >
+                <AccordionTrigger className="min-h-16 py-5 text-base font-semibold text-white hover:text-teal-200 hover:no-underline focus-visible:border-teal-400/60 focus-visible:ring-teal-400/25 [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:text-white/55">
+                  <span className="pr-4">{faq.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="max-w-2xl pb-6 pr-10 text-sm leading-6 text-white/65">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </section>
 
         <section className="mt-16 flex flex-col gap-6 border-b border-white/10 pb-12 md:flex-row md:items-center md:justify-between" aria-labelledby="enterprise-title">
           <div>
             <p className="void-kicker mb-3">For organisations</p>
             <h2 id="enterprise-title" className="text-3xl font-semibold text-white">
-              Need a custom arrangement?
+              Custom plans are coming later.
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55">
-              Contact us about team access, custom voice allowances, invoicing, or deployment requirements.
+              Organisation accounts, custom voice allowances, and invoicing are not available yet. Contact options will appear here when they launch.
             </p>
           </div>
-          <a
-            href="mailto:support@echomind.ai?subject=EchoMind%20organisation%20plan"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center bg-white px-5 py-3 text-sm font-semibold text-black transition-colors hover:bg-teal-100"
+          <span
+            className="inline-flex min-h-11 shrink-0 cursor-not-allowed items-center justify-center border border-white/15 px-5 py-3 text-sm font-semibold text-white/45"
+            aria-label="Organisation plans are not available yet"
           >
-            Contact us
-          </a>
+            Not available yet
+          </span>
         </section>
 
         {/* Footer Navigation */}
