@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Check } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import { motion, useMotionValue, useMotionTemplate } from "motion/react";
 
 interface PricingCardProps {
@@ -17,6 +17,8 @@ interface PricingCardProps {
   available?: boolean;
   features: string[];
   isCurrentPlan: boolean;
+  isLoading?: boolean;
+  checkoutDisabled?: boolean;
   onUpgrade: () => void;
   actionLabel?: string;
   index: number;        // staggered entrance
@@ -37,6 +39,8 @@ export default function PricingCard({
   available = true,
   features,
   isCurrentPlan,
+  isLoading = false,
+  checkoutDisabled = false,
   onUpgrade,
   actionLabel = "Choose plan",
   index,
@@ -287,11 +291,15 @@ export default function PricingCard({
           ) : available ? (
             <motion.button
               onClick={onUpgrade}
-              className="w-full relative overflow-hidden py-4 rounded-xl font-extrabold text-sm tracking-wider text-white transition-all duration-300 flex items-center justify-center gap-2"
+              disabled={checkoutDisabled}
+              aria-busy={isLoading}
+              className={`w-full relative overflow-hidden py-4 rounded-xl font-extrabold text-sm tracking-wider text-white transition-all duration-300 flex items-center justify-center gap-2 ${
+                checkoutDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              }`}
               style={{
                 background: `linear-gradient(135deg, ${accent}cc 0%, ${accent} 100%)`,
               }}
-              whileHover="hover"
+              whileHover={checkoutDisabled ? undefined : "hover"}
               variants={{
                 hover: {
                   scale: 1.02,
@@ -299,7 +307,7 @@ export default function PricingCard({
                   boxShadow: `0 10px 30px rgba(${accentRgb}, 0.45)`,
                 }
               }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={checkoutDisabled ? undefined : { scale: 0.98 }}
             >
               {/* Shimmer Effect */}
               <motion.span
@@ -312,7 +320,14 @@ export default function PricingCard({
                   }
                 }}
               />
-              {actionLabel}
+              {isLoading ? (
+                <span className="relative z-10 inline-flex items-center gap-2" aria-live="polite">
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Opening checkout...
+                </span>
+              ) : (
+                <span className="relative z-10">{actionLabel}</span>
+              )}
             </motion.button>
           ) : (
             <button

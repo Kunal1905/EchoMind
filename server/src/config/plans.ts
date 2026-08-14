@@ -1,8 +1,8 @@
 export const PLANS = {
   free: { price: 0, minutes: 10, name: "Free", available: true },
   starter: { price: 399, minutes: 20, name: "Starter", available: true },
-  growth: { price: 799, minutes: 40, name: "Growth", available: false },
-  pro: { price: 1499, minutes: 75, name: "Pro", available: false },
+  growth: { price: 799, minutes: 40, name: "Growth", available: true },
+  pro: { price: 1499, minutes: 75, name: "Pro", available: true },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;

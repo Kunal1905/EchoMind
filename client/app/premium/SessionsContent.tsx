@@ -13,9 +13,10 @@ import PricingCard from "./PricingCard";
 
 type SessionsContentProps = {
   onNavigate?: (page: string) => void;
-  onUpgrade?: (planId: "starter") => void | Promise<void>;
+  onUpgrade?: (planId: "starter" | "growth" | "pro") => void | Promise<void>;
   isPremium?: boolean;
   currentPlan?: "free" | "starter" | "growth" | "pro";
+  checkoutPlanId?: "starter" | "growth" | "pro" | null;
 };
 
 const plans = [
@@ -63,15 +64,15 @@ const plans = [
     id: "growth" as const,
     name: "Growth",
     price: "₹799",
-    billingLabel: "planned price per month",
+    billingLabel: "one-time payment",
     minutes: 40,
     accent: "#8B5CF6", // Premium Purple
     accentRgb: "139, 92, 246",
-    badge: "COMING SOON",
+    badge: "AVAILABLE",
     icon: <Zap />,
     featured: false,
-    available: false,
-    actionLabel: "Coming soon",
+    available: true,
+    actionLabel: "Choose Growth",
     features: [
       "40 voice conversation minutes each month",
       "Everything in Starter",
@@ -83,15 +84,15 @@ const plans = [
     id: "pro" as const,
     name: "Pro",
     price: "₹1,499",
-    billingLabel: "planned price per month",
+    billingLabel: "one-time payment",
     minutes: 75,
     accent: "#F59E0B", // Luxury Amber/Gold
     accentRgb: "245, 158, 11",
-    badge: "COMING SOON",
+    badge: "AVAILABLE",
     icon: <Crown />,
     featured: false,
-    available: false,
-    actionLabel: "Coming soon",
+    available: true,
+    actionLabel: "Choose Pro",
     features: [
       "75 voice conversation minutes each month",
       "Everything in Growth",
@@ -106,7 +107,7 @@ const comparisonRows = [
   { label: "Session summaries", values: [true, true, true, true] },
   { label: "Mood history", values: [true, true, true, true] },
   { label: "Optional personalized memory", values: [true, true, true, true] },
-  { label: "Available now", values: [true, true, false, false] },
+  { label: "Available now", values: [true, true, true, true] },
 ];
 
 const billingFaqs = [
@@ -121,9 +122,9 @@ const billingFaqs = [
       "New voice conversations pause until your allowance resets in the next calendar month or you choose an available paid plan. Your account and saved history remain available.",
   },
   {
-    question: "Does Starter renew automatically?",
+    question: "Do paid plans renew automatically?",
     answer:
-      "No. The current Starter checkout is a one-time ₹399 Razorpay payment, not an automatic recurring debit. Starter remains active on your account and its 20-minute allowance resets each calendar month.",
+      "No. Starter, Growth, and Pro are one-time Razorpay payments, not automatic recurring debits. Your selected plan remains active and its voice allowance resets each calendar month.",
   },
   {
     question: "When do monthly minutes reset?",
@@ -133,7 +134,7 @@ const billingFaqs = [
   {
     question: "Can I cancel or request a refund?",
     answer:
-      "There is no recurring Starter debit to cancel. Payments are generally non-refundable after the allowance is activated, except where required by law or for a billing error. Keep your Razorpay receipt if you need to raise a payment dispute.",
+      "There is no recurring paid-plan debit to cancel. Payments are generally non-refundable after the allowance is activated, except where required by law or for a billing error. Keep your Razorpay receipt if you need to raise a payment dispute.",
   },
 ];
 
@@ -142,6 +143,7 @@ export function SessionsContent({
   onUpgrade = async () => {},
   isPremium = false,
   currentPlan = "free",
+  checkoutPlanId = null,
 }: SessionsContentProps) {
   const posthog = usePostHog();
 
@@ -162,30 +164,7 @@ export function SessionsContent({
             </h1>
           </div>
           <p className="void-copy text-neutral-400 text-lg leading-relaxed">
-            Compare monthly voice allowances. Free never auto-charges, and Starter is currently a one-time purchase through Razorpay.
-          </p>
-        </div>
-
-        <div className="mb-10 flex flex-col gap-3 border-y border-white/10 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex w-fit border border-white/15 p-1" role="group" aria-label="Billing period">
-            <button
-              type="button"
-              aria-pressed="true"
-              className="bg-white px-4 py-2 text-sm font-semibold text-black"
-            >
-              Monthly allowances
-            </button>
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed px-4 py-2 text-sm font-semibold text-white/35"
-              title="Annual billing is not available"
-            >
-              Annual unavailable
-            </button>
-          </div>
-          <p className="max-w-xl text-sm text-white/55">
-            Annual billing is not offered yet, so there is no annual discount to apply.
+            Compare monthly voice allowances. Free never auto-charges, and every paid plan is a one-time purchase through Razorpay.
           </p>
         </div>
 
@@ -211,6 +190,8 @@ export function SessionsContent({
                   available={plan.available}
                   features={plan.features}
                   isCurrentPlan={isCurrentPlan}
+                  isLoading={checkoutPlanId === plan.id}
+                  checkoutDisabled={checkoutPlanId !== null && plan.id !== "free"}
                   actionLabel={plan.actionLabel}
                   index={index}
                   onUpgrade={() => {
@@ -218,7 +199,6 @@ export function SessionsContent({
                       onNavigate("chat");
                       return;
                     }
-                    if (plan.id !== "starter") return;
                     posthog.capture("upgrade_clicked", { planId: plan.id, price: plan.price });
                     onUpgrade(plan.id);
                   }}
@@ -237,7 +217,7 @@ export function SessionsContent({
               </h2>
             </div>
             <p className="max-w-lg text-sm leading-6 text-white/55">
-              Growth and Pro are previews only. Their prices and availability may change before launch.
+              Every paid plan is a one-time purchase that sets your monthly voice allowance.
             </p>
           </div>
           <div className="overflow-x-auto border-y border-white/10">
@@ -303,24 +283,6 @@ export function SessionsContent({
               </AccordionItem>
             ))}
           </Accordion>
-        </section>
-
-        <section className="mt-16 flex flex-col gap-6 border-b border-white/10 pb-12 md:flex-row md:items-center md:justify-between" aria-labelledby="enterprise-title">
-          <div>
-            <p className="void-kicker mb-3">For organisations</p>
-            <h2 id="enterprise-title" className="text-3xl font-semibold text-white">
-              Custom plans are coming later.
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55">
-              Organisation accounts, custom voice allowances, and invoicing are not available yet. Contact options will appear here when they launch.
-            </p>
-          </div>
-          <span
-            className="inline-flex min-h-11 shrink-0 cursor-not-allowed items-center justify-center border border-white/15 px-5 py-3 text-sm font-semibold text-white/45"
-            aria-label="Organisation plans are not available yet"
-          >
-            Not available yet
-          </span>
         </section>
 
         {/* Footer Navigation */}

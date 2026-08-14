@@ -1,11 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { db } from "../../config/db";
-import { usersTable, processedPaymentsTable } from "../../config/schema";
-import { eq } from "drizzle-orm";
 import { PLANS, isPurchasablePlan, type PlanKey } from "../../config/plans";
-import { getRedis } from "../../lib/redis";
-import { trackServer } from "../../lib/analytics";
+import { activatePaidPlan } from "../../lib/activatePaidPlan";
 
 const router = Router();
 
@@ -26,10 +22,12 @@ router.post("/", async (req, res) => {
     .update(rawBody)
     .digest("hex");
 
-  if (!signature || !crypto.timingSafeEqual(
-    Buffer.from(expectedSignature),
-    Buffer.from(signature)
-  )) {
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
+  const signatureBuffer = Buffer.from(signature || "", "hex");
+  if (
+    signatureBuffer.length !== expectedBuffer.length ||
+    !crypto.timingSafeEqual(expectedBuffer, signatureBuffer)
+  ) {
     console.warn("[razorpay-webhook] Invalid signature");
     return res.status(400).json({ error: "Invalid signature" });
   }
@@ -57,50 +55,19 @@ router.post("/", async (req, res) => {
       return res.status(200).json({ received: true });
     }
 
-    const planData = PLANS[plan];
+    const result = await activatePaidPlan({
+      userId,
+      plan,
+      paymentId,
+      amount: body.payload?.payment?.entity?.amount,
+    });
 
-    // ✅ Idempotency gate — atomic at the DB level. If this payment ID was
-    // already recorded (e.g. Razorpay retried the webhook), the insert is a
-    // no-op and .returning() comes back empty, so we skip crediting again.
-    // This is race-safe even if two deliveries for the same payment arrive
-    // at the same instant, unlike a "check then insert" pattern would be.
-    const claimed = await db.insert(processedPaymentsTable)
-      .values({
-        paymentId,
-        userId,
-        plan,
-        minutesCredited: planData.minutes,
-      })
-      .onConflictDoNothing({ target: processedPaymentsTable.paymentId })
-      .returning({ paymentId: processedPaymentsTable.paymentId });
-
-    if (claimed.length === 0) {
+    if (result.alreadyProcessed) {
       console.log(`[razorpay-webhook] Payment ${paymentId} already processed — skipping duplicate credit`);
       return res.status(200).json({ received: true, alreadyProcessed: true });
     }
 
-    await db.update(usersTable)
-      .set({
-        plan,
-        minutesRemaining: planData.minutes,
-        minutesTotal: planData.minutes,
-        minuteAllowanceResetAt: new Date(),
-      })
-      .where(eq(usersTable.id, userId));
-
-    trackServer("payment_captured_server", userId, {
-      plan,
-      amount: body.payload?.payment?.entity?.amount,
-      monthlyAllowance: planData.minutes,
-    });
-
-    // Invalidate Redis balance cache
-    const redis = getRedis();
-    if (redis) {
-      await redis.del(`user:${userId}:balance`).catch(() => { });
-    }
-
-    console.log(`[razorpay-webhook] ${planData.minutes} min monthly allowance → user ${userId} (${plan})`);
+    console.log(`[razorpay-webhook] ${PLANS[plan].minutes} min monthly allowance → user ${userId} (${plan})`);
   }
 
   res.status(200).json({ received: true });

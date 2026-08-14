@@ -35,6 +35,13 @@ function AppScreenLoading() {
 
 const FREE_TRIAL_LIMIT = 10;
 type PlanId = "free" | "starter" | "growth" | "pro";
+type PurchasablePlanId = Exclude<PlanId, "free">;
+
+const paidPlanDetails: Record<PurchasablePlanId, { name: string; minutes: number }> = {
+  starter: { name: "Starter", minutes: 20 },
+  growth: { name: "Growth", minutes: 40 },
+  pro: { name: "Pro", minutes: 75 },
+};
 
 type ApiError = {
   response?: {
@@ -51,6 +58,12 @@ type RazorpayFailure = {
   };
 };
 
+type RazorpaySuccess = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
+
 type RazorpayInstance = {
   on: (event: "payment.failed", handler: (response: RazorpayFailure) => void) => void;
   open: () => void;
@@ -63,7 +76,7 @@ type RazorpayConstructor = new (options: {
   name: string;
   description: string;
   order_id: string;
-  handler: () => void | Promise<void>;
+  handler: (response: RazorpaySuccess) => void | Promise<void>;
   modal: {
     ondismiss: () => void;
   };
@@ -127,6 +140,7 @@ const loadRazorpayCheckout = () =>
 export default function AppShell() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
+  const [checkoutPlanId, setCheckoutPlanId] = useState<PurchasablePlanId | null>(null);
 
   const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
 
@@ -178,7 +192,10 @@ export default function AppShell() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
-  const handleUpgrade = async (planId: "starter") => {
+  const handleUpgrade = async (planId: PurchasablePlanId) => {
+    if (checkoutPlanId) return;
+    setCheckoutPlanId(planId);
+
     try {
       await loadRazorpayCheckout();
 
@@ -187,23 +204,33 @@ export default function AppShell() {
         headers: { Authorization: `Bearer ${token}` },
       } : undefined;
       const orderRes = await api.post("/subscription/create-order", { planId }, authConfig);
-      const { orderId, amount, currency } = orderRes.data;
+      const { orderId, amount, currency, keyId } = orderRes.data;
+      if (!orderId || !amount || !currency || !keyId) {
+        throw new Error("The payment order response is incomplete.");
+      }
+
       const Razorpay = window.Razorpay;
       if (!Razorpay) {
         throw new Error("Razorpay checkout failed to load.");
       }
 
+      const plan = paidPlanDetails[planId];
       const rzp = new Razorpay({
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: keyId,
         amount,
         currency,
         name: "EchoMind",
-        description: "Starter plan - 20 voice minutes each month",
+        description: `${plan.name} plan - ${plan.minutes} voice minutes each month`,
         order_id: orderId,
-        handler: async () => {
+        handler: async (paymentResponse) => {
           try {
+            await api.post(
+              "/subscription/verify-payment",
+              paymentResponse,
+              authConfig
+            );
+
             const sub = await api.get("/subscription", authConfig);
-            // ✅ Map server shape correctly — this was also silently broken
             setSubscriptionData({
               premiumCallsRemaining: sub.data.minutesRemaining ?? 0,
               premiumCallsTotal: sub.data.minutesTotal ?? FREE_TRIAL_LIMIT,
@@ -212,7 +239,7 @@ export default function AppShell() {
               freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
               plan: sub.data.plan || "free",
             });
-            alert("Payment successful! Your Starter plan is active.");
+            alert(`Payment successful! Your ${plan.name} plan is active.`);
           } catch (e) {
             console.error("Failed to refresh subscription after payment:", e);
             alert("Payment succeeded, but we couldn't refresh your balance. Please reload the page.");
@@ -240,6 +267,8 @@ export default function AppShell() {
         apiError.response?.data?.error ||
         "Couldn't start the payment process. Please try again in a moment."
       );
+    } finally {
+      setCheckoutPlanId(null);
     }
   };
 
@@ -304,6 +333,7 @@ export default function AppShell() {
                 onUpgrade={handleUpgrade}
                 isPremium={subscriptionData.isPremium}
                 currentPlan={subscriptionData.plan}
+                checkoutPlanId={checkoutPlanId}
               />
             )}
 

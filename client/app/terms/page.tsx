@@ -159,15 +159,15 @@ export default function TermsPage() {
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Growth</td>
-                    <td className="px-4 py-3">₹799/month</td>
+                    <td className="px-4 py-3">₹799 one-time payment</td>
                     <td className="px-4 py-3">40 minutes</td>
-                    <td className="px-4 py-3">Coming soon</td>
+                    <td className="px-4 py-3">Purchasable</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Pro</td>
-                    <td className="px-4 py-3">₹1,499/month</td>
+                    <td className="px-4 py-3">₹1,499 one-time payment</td>
                     <td className="px-4 py-3">75 minutes</td>
-                    <td className="px-4 py-3">Coming soon</td>
+                    <td className="px-4 py-3">Purchasable</td>
                   </tr>
                 </tbody>
               </table>
@@ -175,13 +175,10 @@ export default function TermsPage() {
 
             <ul className="list-disc pl-6 space-y-2 text-gray-300 text-sm">
               <li>
-                <strong className="text-white">Monthly Allowances:</strong> Free and paid plan allowances reset once per calendar month. Starter is currently the only paid plan available for purchase.
+                <strong className="text-white">Monthly Allowances:</strong> Free and paid plan allowances reset once per calendar month. Starter, Growth, and Pro are available for purchase.
               </li>
               <li>
-                <strong className="text-white">Automatic Renewal:</strong> Starter is currently activated through a one-time payment and does not create an automatically recurring debit. The plan remains active unless your account arrangement is changed.
-              </li>
-              <li>
-                <strong className="text-white">Coming Soon Plans:</strong> Growth and Pro are shown for visibility, but they are not purchasable until they are officially launched.
+                <strong className="text-white">Automatic Renewal:</strong> Paid plans are activated through a one-time payment and do not create an automatically recurring debit. The selected plan remains active unless your account arrangement is changed.
               </li>
               <li>
                 <strong className="text-white">Refunds:</strong> Subscription payments are non-refundable once the monthly allowance has been activated, except where required by applicable law (such as under consumer protection regulations in India) or if a technical error occurred on our part during the billing process. If you believe you were charged in error, please contact <a href="mailto:support@echomind.ai" className="text-teal-400 hover:underline">support@echomind.ai</a> within 7 days of the transaction.
