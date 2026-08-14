@@ -47,6 +47,29 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
+  if (body.message?.type === "tool-calls") {
+    const toolCalls = Array.isArray(body.message.toolCallList)
+      ? body.message.toolCallList
+      : [];
+    const crisisToolCalls = toolCalls.filter(
+      (toolCall: { name?: string; function?: { name?: string } }) =>
+        toolCall.name === "show_crisis_support" ||
+        toolCall.function?.name === "show_crisis_support",
+    );
+
+    if (crisisToolCalls.length === 0) {
+      return res.status(400).json({ error: "Unsupported tool call" });
+    }
+
+    return res.status(200).json({
+      results: crisisToolCalls.map((toolCall: { id: string }) => ({
+        toolCallId: toolCall.id,
+        result:
+          "Crisis support is now visible on the user's screen. Do not read phone numbers aloud. Continue with a brief supportive safety check-in.",
+      })),
+    });
+  }
+
   // ✅ Correct event type from Vapi
   if (body.message?.type === "end-of-call-report") {
     const call = body.message.call;

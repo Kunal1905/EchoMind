@@ -14,7 +14,12 @@ import api from "@/app/lib/api";
 import { usePostHog } from "posthog-js/react";
 import { PrivacyConsentModal } from "../../components/PrivacyConsentModal";
 import { MoodCheckModal } from "../../components/MoodCheckModal";
+import { CrisisSupportDialog } from "../../components/CrisisSupportDialog";
 import ConstellationField from "../../components/ConstellationField";
+import {
+  isFinalUserCrisisTranscript,
+  isShowCrisisSupportToolCall,
+} from "../crisisSupport";
 import {
   applyTranscriptEvent,
   isVapiTranscriptEvent,
@@ -132,6 +137,7 @@ export function ChatContent({
   } | null>(null);
   const [voiceRecoveryNotice, setVoiceRecoveryNotice] =
     useState<VoiceRecoveryNotice | null>(null);
+  const [isCrisisSupportOpen, setIsCrisisSupportOpen] = useState(false);
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
@@ -170,6 +176,7 @@ export function ChatContent({
   const saveAttemptedRef = useRef(false);
   const callStartRef = useRef<number | null>(null); // ✅ live call-start timestamp (avoids stale state in the once-registered listener)
   const isRecordingRef = useRef(false);
+  const crisisSupportOpenRef = useRef(false);
   const lastRecoveryNoticeRef = useRef(0);
 
   // Load consent preference from localStorage on mount
@@ -293,8 +300,25 @@ export function ChatContent({
       await saveEndedSession({ source: "onCallEnd" });
     };
 
+    const showCrisisSupport = (source: "vapi_tool_call" | "transcript_safety_net") => {
+      if (crisisSupportOpenRef.current) return;
+
+      crisisSupportOpenRef.current = true;
+      setIsCrisisSupportOpen(true);
+      posthog.capture("crisis_support_shown", { source });
+    };
+
     const onMessage = (msg: VapiTranscriptEvent) => {
+      if (isShowCrisisSupportToolCall(msg)) {
+        showCrisisSupport("vapi_tool_call");
+        return;
+      }
+
       if (!isVapiTranscriptEvent(msg)) return;
+
+      if (isFinalUserCrisisTranscript(msg)) {
+        showCrisisSupport("transcript_safety_net");
+      }
 
       setIsWaitingForAssistant(false);
       setVoiceRecoveryNotice(null);
@@ -630,6 +654,13 @@ export function ChatContent({
   return (
     <div className="void-page pt-24 px-4 pb-40">
       <ConstellationField density="ambient" className="fixed opacity-35" />
+      <CrisisSupportDialog
+        isOpen={isCrisisSupportOpen}
+        onDismiss={() => {
+          crisisSupportOpenRef.current = false;
+          setIsCrisisSupportOpen(false);
+        }}
+      />
       {/* Header */}
       <div className="relative z-10 container mx-auto max-w-4xl mb-10">
         <div className="flex items-center justify-between">
