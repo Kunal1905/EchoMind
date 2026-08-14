@@ -498,7 +498,7 @@ export default function HomeContent({
               Add time when the habit sticks.
             </h2>
             <p className="void-copy">
-              Monthly plans extend voice time while keeping session history and mood
+              Paid plans extend voice time while keeping session history and mood
               tracking available for longer reflection cycles.
             </p>
             <button

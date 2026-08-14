@@ -130,7 +130,7 @@ export default function TermsPage() {
               5. Plans, billing, and refunds
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed">
-              EchoMind offers a free tier with a monthly voice-time allowance and paid monthly plans processed securely via Razorpay:
+              EchoMind offers a free tier with a monthly voice-time allowance and paid plan purchases processed securely via Razorpay:
             </p>
 
             {/* Plans Table */}
@@ -153,7 +153,7 @@ export default function TermsPage() {
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Starter</td>
-                    <td className="px-4 py-3">₹399/month</td>
+                    <td className="px-4 py-3">₹399 one-time payment</td>
                     <td className="px-4 py-3">20 minutes</td>
                     <td className="px-4 py-3">Purchasable</td>
                   </tr>
@@ -176,6 +176,9 @@ export default function TermsPage() {
             <ul className="list-disc pl-6 space-y-2 text-gray-300 text-sm">
               <li>
                 <strong className="text-white">Monthly Allowances:</strong> Free and paid plan allowances reset once per calendar month. Starter is currently the only paid plan available for purchase.
+              </li>
+              <li>
+                <strong className="text-white">Automatic Renewal:</strong> Starter is currently activated through a one-time payment and does not create an automatically recurring debit. The plan remains active unless your account arrangement is changed.
               </li>
               <li>
                 <strong className="text-white">Coming Soon Plans:</strong> Growth and Pro are shown for visibility, but they are not purchasable until they are officially launched.

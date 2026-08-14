@@ -198,7 +198,7 @@ export default function AppShell() {
         amount,
         currency,
         name: "EchoMind",
-        description: "Starter monthly plan",
+        description: "Starter plan - 20 voice minutes each month",
         order_id: orderId,
         handler: async () => {
           try {
@@ -212,7 +212,7 @@ export default function AppShell() {
               freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
               plan: sub.data.plan || "free",
             });
-            alert("Payment successful! Your Starter monthly plan is active.");
+            alert("Payment successful! Your Starter plan is active.");
           } catch (e) {
             console.error("Failed to refresh subscription after payment:", e);
             alert("Payment succeeded, but we couldn't refresh your balance. Please reload the page.");

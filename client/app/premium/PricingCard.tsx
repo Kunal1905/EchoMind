@@ -7,6 +7,7 @@ import { motion, useMotionValue, useMotionTemplate } from "motion/react";
 interface PricingCardProps {
   title: string;
   price: string;
+  billingLabel?: string;
   minutes: number;
   icon: React.ReactNode;
   accent: string;       // e.g. "#8052ff"
@@ -17,6 +18,7 @@ interface PricingCardProps {
   features: string[];
   isCurrentPlan: boolean;
   onUpgrade: () => void;
+  actionLabel?: string;
   index: number;        // staggered entrance
 }
 
@@ -25,6 +27,7 @@ const noiseBg = "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://w
 export default function PricingCard({
   title,
   price,
+  billingLabel = "per month",
   minutes,
   icon,
   accent,
@@ -35,6 +38,7 @@ export default function PricingCard({
   features,
   isCurrentPlan,
   onUpgrade,
+  actionLabel = "Choose plan",
   index,
 }: PricingCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -242,7 +246,7 @@ export default function PricingCard({
               </span>
             </div>
             <span className="mt-1 text-xs font-semibold tracking-wide text-neutral-400 uppercase">
-              per month
+              {billingLabel}
             </span>
           </div>
 
@@ -308,7 +312,7 @@ export default function PricingCard({
                   }
                 }}
               />
-              Subscribe
+              {actionLabel}
             </motion.button>
           ) : (
             <button
