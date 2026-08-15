@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleMinus, Crown, MessageCircle, Sparkles, Zap } from "lucide-react";
+import { AlertTriangle, Check, CircleMinus, Crown, MessageCircle, RefreshCw, Sparkles, X, Zap } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
 import {
@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from "../components/ui/accordion";
 import PricingCard from "./PricingCard";
+import { BillingOverview } from "./BillingOverview";
 
 type SessionsContentProps = {
   onNavigate?: (page: string) => void;
@@ -17,6 +18,13 @@ type SessionsContentProps = {
   isPremium?: boolean;
   currentPlan?: "free" | "starter" | "growth" | "pro";
   checkoutPlanId?: "starter" | "growth" | "pro" | null;
+  checkoutError?: {
+    message: string;
+    planId: "starter" | "growth" | "pro";
+    canRetry: boolean;
+  } | null;
+  onRetryCheckout?: () => void;
+  onDismissCheckoutError?: () => void;
 };
 
 const plans = [
@@ -144,6 +152,9 @@ export function SessionsContent({
   isPremium = false,
   currentPlan = "free",
   checkoutPlanId = null,
+  checkoutError = null,
+  onRetryCheckout = () => {},
+  onDismissCheckoutError = () => {},
 }: SessionsContentProps) {
   const posthog = usePostHog();
 
@@ -168,8 +179,38 @@ export function SessionsContent({
           </p>
         </div>
 
+        {checkoutError && (
+          <div className="mb-8 flex flex-col gap-4 border-y border-red-400/30 py-4 text-red-100 sm:flex-row sm:items-center" role="alert">
+            <AlertTriangle className="shrink-0 text-red-300" size={20} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Payment needs attention</p>
+              <p className="mt-1 text-sm leading-5 text-red-100/70">{checkoutError.message}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {checkoutError.canRetry && (
+                <button
+                  type="button"
+                  onClick={onRetryCheckout}
+                  disabled={checkoutPlanId !== null}
+                  className="inline-flex min-h-10 items-center gap-2 border border-red-300/30 px-4 text-sm font-semibold text-red-100 transition hover:bg-red-300/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RefreshCw size={15} /> Try again
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onDismissCheckoutError}
+                className="inline-flex h-10 w-10 items-center justify-center text-red-100/60 transition hover:text-white"
+                aria-label="Dismiss payment message"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Pricing Cards Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-stretch">
+        <div id="pricing-plans" className="scroll-mt-28 grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-stretch">
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan.toLowerCase() === plan.name.toLowerCase();
             return (
@@ -251,6 +292,8 @@ export function SessionsContent({
             </table>
           </div>
         </section>
+
+        <BillingOverview />
 
         <section className="mt-20 grid gap-10 border-y border-white/10 py-12 lg:grid-cols-[0.8fr_1.2fr]" aria-labelledby="billing-faq-title">
           <div>

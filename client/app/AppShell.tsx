@@ -36,6 +36,11 @@ function AppScreenLoading() {
 const FREE_TRIAL_LIMIT = 10;
 type PlanId = "free" | "starter" | "growth" | "pro";
 type PurchasablePlanId = Exclude<PlanId, "free">;
+type CheckoutError = {
+  message: string;
+  planId: PurchasablePlanId;
+  canRetry: boolean;
+};
 
 const paidPlanDetails: Record<PurchasablePlanId, { name: string; minutes: number }> = {
   starter: { name: "Starter", minutes: 20 },
@@ -141,6 +146,7 @@ export default function AppShell() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentPage, setCurrentPage] = useState("home");
   const [checkoutPlanId, setCheckoutPlanId] = useState<PurchasablePlanId | null>(null);
+  const [checkoutError, setCheckoutError] = useState<CheckoutError | null>(null);
 
   const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
 
@@ -195,6 +201,7 @@ export default function AppShell() {
   const handleUpgrade = async (planId: PurchasablePlanId) => {
     if (checkoutPlanId) return;
     setCheckoutPlanId(planId);
+    setCheckoutError(null);
 
     try {
       await loadRazorpayCheckout();
@@ -242,7 +249,11 @@ export default function AppShell() {
             alert(`Payment successful! Your ${plan.name} plan is active.`);
           } catch (e) {
             console.error("Failed to refresh subscription after payment:", e);
-            alert("Payment succeeded, but we couldn't refresh your balance. Please reload the page.");
+            setCheckoutError({
+              planId,
+              canRetry: false,
+              message: "Payment was received, but account confirmation is still pending. Please reload shortly before attempting another payment.",
+            });
           }
         },
         modal: {
@@ -256,17 +267,22 @@ export default function AppShell() {
 
       rzp.on("payment.failed", (response: RazorpayFailure) => {
         console.error("Payment failed:", response.error);
-        alert(`Payment failed: ${response.error.description || "Please try again."}`);
+        setCheckoutError({
+          planId,
+          canRetry: true,
+          message: response.error.description || "The payment could not be completed. Check your payment details and try again.",
+        });
       });
 
       rzp.open();
     } catch (err: unknown) {
       const apiError = asApiError(err);
       console.error("Upgrade error:", err);
-      alert(
-        apiError.response?.data?.error ||
-        "Couldn't start the payment process. Please try again in a moment."
-      );
+      setCheckoutError({
+        planId,
+        canRetry: true,
+        message: apiError.response?.data?.error || "Couldn't start the payment process. Please try again in a moment.",
+      });
     } finally {
       setCheckoutPlanId(null);
     }
@@ -334,6 +350,11 @@ export default function AppShell() {
                 isPremium={subscriptionData.isPremium}
                 currentPlan={subscriptionData.plan}
                 checkoutPlanId={checkoutPlanId}
+                checkoutError={checkoutError}
+                onDismissCheckoutError={() => setCheckoutError(null)}
+                onRetryCheckout={() => {
+                  if (checkoutError?.canRetry) void handleUpgrade(checkoutError.planId);
+                }}
               />
             )}
 

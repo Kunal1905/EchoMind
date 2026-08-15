@@ -8,9 +8,20 @@ export async function ensureSchemaCompatibility() {
       "user_id" varchar NOT NULL,
       "plan" varchar NOT NULL,
       "minutes_credited" integer NOT NULL,
+      "amount_paid" integer,
+      "currency" varchar(3) DEFAULT 'INR',
+      "payment_method" varchar,
+      "card_last4" varchar(4),
+      "billing_email" varchar,
       "created_at" timestamp DEFAULT now()
     )
   `);
+
+  await db.execute(sql`ALTER TABLE "processed_payments" ADD COLUMN IF NOT EXISTS "amount_paid" integer`);
+  await db.execute(sql`ALTER TABLE "processed_payments" ADD COLUMN IF NOT EXISTS "currency" varchar(3) DEFAULT 'INR'`);
+  await db.execute(sql`ALTER TABLE "processed_payments" ADD COLUMN IF NOT EXISTS "payment_method" varchar`);
+  await db.execute(sql`ALTER TABLE "processed_payments" ADD COLUMN IF NOT EXISTS "card_last4" varchar(4)`);
+  await db.execute(sql`ALTER TABLE "processed_payments" ADD COLUMN IF NOT EXISTS "billing_email" varchar`);
 
   await db.execute(sql`
     ALTER TABLE "users_table"

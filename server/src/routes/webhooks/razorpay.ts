@@ -44,6 +44,7 @@ router.post("/", async (req, res) => {
     const userId = notes.userId as string | undefined;
     const plan = notes.plan as PlanKey | undefined;
     const paymentId = body.payload?.payment?.entity?.id as string | undefined;
+    const paymentEntity = body.payload?.payment?.entity || {};
 
     if (!userId || !plan || !PLANS[plan] || !paymentId) {
       console.warn("[razorpay-webhook] Missing userId/plan/paymentId in payload:", { notes, paymentId });
@@ -59,7 +60,11 @@ router.post("/", async (req, res) => {
       userId,
       plan,
       paymentId,
-      amount: body.payload?.payment?.entity?.amount,
+      amount: paymentEntity.amount,
+      currency: paymentEntity.currency,
+      paymentMethod: paymentEntity.method,
+      cardLast4: paymentEntity.card?.last4,
+      billingEmail: paymentEntity.email,
     });
 
     if (result.alreadyProcessed) {

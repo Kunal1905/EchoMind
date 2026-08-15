@@ -42,6 +42,11 @@ export const processedPaymentsTable = pgTable("processed_payments", {
   userId: varchar("user_id").notNull(),
   plan: varchar("plan").notNull(),
   minutesCredited: integer("minutes_credited").notNull(),
+  amountPaid: integer("amount_paid"),
+  currency: varchar("currency", { length: 3 }).default("INR"),
+  paymentMethod: varchar("payment_method"),
+  cardLast4: varchar("card_last4", { length: 4 }),
+  billingEmail: varchar("billing_email"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -1,11 +1,12 @@
 import { Router } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
+import PDFDocument from "pdfkit";
 import { z } from "zod";
 import { db } from "../config/db";
-import { usersTable } from "../config/schema";
+import { processedPaymentsTable, usersTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { PLANS, isPurchasablePlan, type PlanKey } from "../config/plans";
 import { activatePaidPlan } from "../lib/activatePaidPlan";
 
@@ -56,6 +57,107 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
   } catch (error) {
     console.error("[subscription GET]", error);
     res.status(500).json({ error: "Failed to fetch subscription" });
+  }
+});
+
+router.get("/billing", requireUser, async (req: AuthedRequest, res) => {
+  try {
+    const [users, payments] = await Promise.all([
+      db
+        .select({ email: usersTable.email, plan: usersTable.plan })
+        .from(usersTable)
+        .where(eq(usersTable.id, req.authUserId!))
+        .limit(1),
+      db
+        .select()
+        .from(processedPaymentsTable)
+        .where(eq(processedPaymentsTable.userId, req.authUserId!))
+        .orderBy(desc(processedPaymentsTable.createdAt)),
+    ]);
+
+    const user = users[0];
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    return res.json({
+      billingModel: "one_time",
+      billingEmail: user.email,
+      currentPlan: user.plan,
+      paymentMethodOnFile: null,
+      nextBilling: null,
+      taxStatus: "not_separately_itemised",
+      payments: payments.map((payment) => {
+        const plan = PLANS[payment.plan as PlanKey];
+        return {
+          paymentId: payment.paymentId,
+          plan: payment.plan,
+          planName: plan?.name || payment.plan,
+          amount: payment.amountPaid ?? (plan ? plan.price * 100 : null),
+          currency: payment.currency || "INR",
+          paymentMethod: payment.paymentMethod,
+          cardLast4: payment.cardLast4,
+          billingEmail: payment.billingEmail || user.email,
+          createdAt: payment.createdAt,
+          receiptAvailable: true,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("[subscription billing]", error);
+    return res.status(500).json({ error: "Failed to load billing history" });
+  }
+});
+
+router.get("/receipts/:paymentId", requireUser, async (req: AuthedRequest, res) => {
+  try {
+    const paymentId = Array.isArray(req.params.paymentId)
+      ? req.params.paymentId[0]
+      : req.params.paymentId;
+    const rows = await db
+      .select()
+      .from(processedPaymentsTable)
+      .where(and(
+        eq(processedPaymentsTable.paymentId, paymentId),
+        eq(processedPaymentsTable.userId, req.authUserId!)
+      ))
+      .limit(1);
+
+    const payment = rows[0];
+    if (!payment) return res.status(404).json({ error: "Payment receipt not found" });
+
+    const plan = PLANS[payment.plan as PlanKey];
+    const amount = payment.amountPaid ?? (plan ? plan.price * 100 : 0);
+    const currency = payment.currency || "INR";
+    const date = payment.createdAt ? new Date(payment.createdAt) : new Date();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="echomind-receipt-${payment.paymentId}.pdf"`
+    );
+
+    const doc = new PDFDocument({ size: "A4", margin: 56 });
+    doc.pipe(res);
+    doc.fontSize(24).text("EchoMind Payment Receipt");
+    doc.moveDown(0.35);
+    doc.fontSize(10).fillColor("#555555").text("This receipt confirms payment and is not a tax invoice.");
+    doc.moveDown(2);
+    doc.fillColor("#111111").fontSize(11);
+    doc.text(`Receipt reference: ${payment.paymentId}`);
+    doc.text(`Payment date: ${date.toISOString().slice(0, 10)}`);
+    doc.text(`Plan: ${plan?.name || payment.plan}`);
+    doc.text(`Voice allowance: ${payment.minutesCredited} minutes per calendar month`);
+    doc.text(`Amount paid: ${currency} ${(amount / 100).toFixed(2)}`);
+    doc.text(`Payment method: ${payment.paymentMethod || "Razorpay"}${payment.cardLast4 ? ` ending in ${payment.cardLast4}` : ""}`);
+    doc.text(`Billing email: ${payment.billingEmail || "Account email"}`);
+    doc.text("Tax: Not separately itemised");
+    doc.moveDown(2);
+    doc.fillColor("#555555").fontSize(9).text("Processed securely by Razorpay. EchoMind does not store complete card or bank details.");
+    doc.text("Website: https://echomind.co.in");
+    doc.end();
+  } catch (error) {
+    console.error("[subscription receipt]", error);
+    if (!res.headersSent) return res.status(500).json({ error: "Failed to generate receipt" });
+    return res.end();
   }
 });
 
@@ -153,11 +255,21 @@ router.post("/verify-payment", requireUser, async (req: AuthedRequest, res) => {
       return res.status(409).json({ error: "Payment has not been captured yet" });
     }
 
+    let cardLast4: string | undefined;
+    if (payment.card_id) {
+      const card = await razorpay.cards.fetch(payment.card_id);
+      cardLast4 = card.last4;
+    }
+
     const result = await activatePaidPlan({
       userId: req.authUserId!,
       plan,
       paymentId,
       amount: Number(payment.amount),
+      currency: payment.currency,
+      paymentMethod: payment.method,
+      cardLast4,
+      billingEmail: payment.email,
     });
 
     return res.json({

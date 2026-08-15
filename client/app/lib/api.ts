@@ -31,7 +31,7 @@ const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   try {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !config.headers.Authorization) {
       const token = await window.Clerk?.session?.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

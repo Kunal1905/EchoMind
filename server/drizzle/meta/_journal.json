@@ -29,6 +29,13 @@
       "when": 1785540600000,
       "tag": "0003_monthly_plan_allowances",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786773491492,
+      "tag": "0004_colorful_morlun",
+      "breakpoints": true
     }
   ]
 }

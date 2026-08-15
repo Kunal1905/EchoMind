@@ -10,6 +10,10 @@ type ActivatePaidPlanInput = {
   plan: PurchasablePlanKey;
   paymentId: string;
   amount?: number;
+  currency?: string;
+  paymentMethod?: string;
+  cardLast4?: string;
+  billingEmail?: string;
 };
 
 export async function activatePaidPlan({
@@ -17,6 +21,10 @@ export async function activatePaidPlan({
   plan,
   paymentId,
   amount,
+  currency = "INR",
+  paymentMethod,
+  cardLast4,
+  billingEmail,
 }: ActivatePaidPlanInput) {
   const planData = PLANS[plan];
 
@@ -28,6 +36,11 @@ export async function activatePaidPlan({
         userId,
         plan,
         minutesCredited: planData.minutes,
+        amountPaid: amount,
+        currency,
+        paymentMethod,
+        cardLast4,
+        billingEmail,
       })
       .onConflictDoNothing({ target: processedPaymentsTable.paymentId })
       .returning({ paymentId: processedPaymentsTable.paymentId });
