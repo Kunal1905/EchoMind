@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Clock, CreditCard, Info, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, CreditCard, Info, Loader2, RefreshCw, Smartphone } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
@@ -26,11 +26,22 @@ import {
   type TranscriptMessage as Message,
   type VapiTranscriptEvent,
 } from "../transcriptMessages";
+import {
+  releaseScreenWakeLock,
+  requestScreenWakeLock,
+  type ScreenWakeLockSentinel,
+} from "../screenWakeLock";
 
 
 type VoiceRecoveryNotice = {
   title: string;
   message: string;
+  canReconnect?: boolean;
+};
+
+type VapiMessage = VapiTranscriptEvent & {
+  status?: string;
+  endedReason?: string;
 };
 
 type VapiErrorLike = {
@@ -173,11 +184,28 @@ export function ChatContent({
 
   const vapiRef = useRef<Vapi | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const sessionResumeTokenRef = useRef<string | null>(null);
   const saveAttemptedRef = useRef(false);
   const callStartRef = useRef<number | null>(null); // ✅ live call-start timestamp (avoids stale state in the once-registered listener)
+  const activeSegmentStartRef = useRef<number | null>(null);
+  const accumulatedCallSecondsRef = useRef(0);
+  const maxSessionSecondsRef = useRef<number | null>(null);
+  const intentionalEndRef = useRef(false);
+  const expectedEndRef = useRef(false);
+  const reconnectAttemptRef = useRef(false);
   const isRecordingRef = useRef(false);
   const crisisSupportOpenRef = useRef(false);
   const lastRecoveryNoticeRef = useRef(0);
+  const wakeLockRef = useRef<ScreenWakeLockSentinel | null>(null);
+  const finishInterruptedSessionRef = useRef<() => void>(() => {});
+  const eventContextRef = useRef({
+    consentGranted,
+    isPremium,
+    onNavigate,
+    onSessionComplete,
+    posthog,
+    premiumCalls,
+  });
 
   // Load consent preference from localStorage on mount
   useEffect(() => {
@@ -199,26 +227,100 @@ export function ChatContent({
     isRecordingRef.current = isRecording;
   }, [isRecording]);
 
+  useEffect(() => {
+    eventContextRef.current = {
+      consentGranted,
+      isPremium,
+      onNavigate,
+      onSessionComplete,
+      posthog,
+      premiumCalls,
+    };
+  }, [consentGranted, isPremium, onNavigate, onSessionComplete, posthog, premiumCalls]);
+
+  /* ---------------- SCREEN WAKE LOCK ---------------- */
+  useEffect(() => {
+    if (!isRecording) return;
+
+    let cancelled = false;
+    const acquireWakeLock = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const wakeLock = await requestScreenWakeLock(navigator, wakeLockRef.current);
+        if (cancelled) {
+          await releaseScreenWakeLock(wakeLock);
+          return;
+        }
+        wakeLockRef.current = wakeLock;
+      } catch (error) {
+        if (isDevelopment) debugWarn("[wake-lock] Screen wake lock was unavailable", error);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isRecordingRef.current) {
+        void acquireWakeLock();
+      }
+    };
+
+    void acquireWakeLock();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      const wakeLock = wakeLockRef.current;
+      wakeLockRef.current = null;
+      void releaseScreenWakeLock(wakeLock);
+    };
+  }, [isRecording]);
+
   /* ---------------- VAPI EVENTS ---------------- */
   useEffect(() => {
     const vapi = vapiRef.current;
     if (!vapi) return;
 
     const onCallStart = () => {
+      const isReconnect = reconnectAttemptRef.current;
       sessionIdRef.current = sessionIdRef.current || uuidv4();
-      callStartRef.current = Date.now();
+      callStartRef.current = callStartRef.current || Date.now();
+      activeSegmentStartRef.current = Date.now();
       saveAttemptedRef.current = false;
+      intentionalEndRef.current = false;
+      expectedEndRef.current = false;
+      reconnectAttemptRef.current = false;
       setIsRecording(true);
       setIsInitializing(false);
       setIsWaitingForAssistant(true);
       setVoiceRecoveryNotice(null);
 
-      // Track Session Started in PostHog
-      posthog.capture("session_started", {
-        plan: isPremium ? "paid" : "free",
-        minutesRemaining: premiumCalls,
-        hasMemory: !!consentGranted,
-      });
+      if (isReconnect) {
+        eventContextRef.current.posthog.capture("voice_session_reconnected", {
+          plan: eventContextRef.current.isPremium ? "paid" : "free",
+        });
+      } else {
+        eventContextRef.current.posthog.capture("session_started", {
+          plan: eventContextRef.current.isPremium ? "paid" : "free",
+          minutesRemaining: eventContextRef.current.premiumCalls,
+          hasMemory: !!eventContextRef.current.consentGranted,
+        });
+      }
+    };
+
+    const commitActiveSegment = () => {
+      if (!activeSegmentStartRef.current) return;
+      accumulatedCallSecondsRef.current += Math.max(
+        0,
+        Math.floor((Date.now() - activeSegmentStartRef.current) / 1000),
+      );
+      activeSegmentStartRef.current = null;
+    };
+
+    const getActiveDurationSeconds = () => {
+      const currentSegmentSeconds = activeSegmentStartRef.current
+        ? Math.max(0, Math.floor((Date.now() - activeSegmentStartRef.current) / 1000))
+        : 0;
+      return accumulatedCallSecondsRef.current + currentSegmentSeconds;
     };
 
     const saveEndedSession = async ({
@@ -233,6 +335,7 @@ export function ChatContent({
       setIsRecording(false);
       setIsWaitingForAssistant(false);
       setIsSaving(true);
+      commitActiveSegment();
 
       // ensure we only try to save once
       if (saveAttemptedRef.current) {
@@ -254,12 +357,7 @@ export function ChatContent({
           .map((m) => `${m.sender}: ${m.text}`)
           .join("\n");
 
-        // ✅ Compute duration from the ref, not sessionTime state (which is stale
-        // inside this once-registered listener). This drives the stored time AND
-        // the minutes deducted in /session-chat.
-        const durationSec = callStartRef.current
-          ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
-          : sessionTime;
+        const durationSec = accumulatedCallSecondsRef.current;
 
         const response = await api.post("/session-chat", {
           sessionId: sessionIdRef.current,
@@ -271,20 +369,20 @@ export function ChatContent({
           if (isDevelopment) debugError(`[${source}] Save failed:`, response.status);
         } else {
           // Track Session Completed in PostHog
-          posthog.capture("session_completed", {
+          eventContextRef.current.posthog.capture("session_completed", {
             durationSec,
-            plan: isPremium ? "paid" : "free",
+            plan: eventContextRef.current.isPremium ? "paid" : "free",
             hadIntention: false,
             endSource: source,
           });
-          await onSessionComplete();
+          await eventContextRef.current.onSessionComplete();
           if (completedSessionId) {
             await promptMoodCheck(completedSessionId);
           }
           if (delayBeforeNavigateMs > 0) {
             await new Promise((resolve) => setTimeout(resolve, delayBeforeNavigateMs));
           }
-          onNavigate("history");
+          eventContextRef.current.onNavigate("history");
         }
 
       } catch (e) {
@@ -292,12 +390,46 @@ export function ChatContent({
       } finally {
         setIsSaving(false);
         sessionIdRef.current = null;
+        sessionResumeTokenRef.current = null;
         callStartRef.current = null;
+        activeSegmentStartRef.current = null;
+        accumulatedCallSecondsRef.current = 0;
+        maxSessionSecondsRef.current = null;
+        intentionalEndRef.current = false;
+        expectedEndRef.current = false;
       }
     };
 
     const onCallEnd = async () => {
-      await saveEndedSession({ source: "onCallEnd" });
+      const elapsedSeconds = getActiveDurationSeconds();
+      const reachedSessionLimit = !!maxSessionSecondsRef.current &&
+        elapsedSeconds >= Math.max(0, maxSessionSecondsRef.current - 5);
+      const shouldComplete = intentionalEndRef.current || expectedEndRef.current || reachedSessionLimit;
+
+      if (shouldComplete) {
+        await saveEndedSession({ source: intentionalEndRef.current ? "user-ended" : "onCallEnd" });
+        return;
+      }
+
+      commitActiveSegment();
+      setIsRecording(false);
+      setIsInitializing(false);
+      setIsWaitingForAssistant(false);
+      setIsSaving(false);
+      setVoiceRecoveryNotice({
+        title: "Your session was interrupted",
+        message: "The voice connection ended unexpectedly. Reconnect to continue this same conversation without starting over.",
+        canReconnect: true,
+      });
+      eventContextRef.current.posthog.capture("voice_session_interrupted", {
+        plan: eventContextRef.current.isPremium ? "paid" : "free",
+        elapsedSeconds,
+      });
+    };
+
+    finishInterruptedSessionRef.current = () => {
+      intentionalEndRef.current = true;
+      void saveEndedSession({ source: "interrupted-session-finished" });
     };
 
     const showCrisisSupport = (source: "vapi_tool_call" | "transcript_safety_net") => {
@@ -305,10 +437,15 @@ export function ChatContent({
 
       crisisSupportOpenRef.current = true;
       setIsCrisisSupportOpen(true);
-      posthog.capture("crisis_support_shown", { source });
+      eventContextRef.current.posthog.capture("crisis_support_shown", { source });
     };
 
-    const onMessage = (msg: VapiTranscriptEvent) => {
+    const onMessage = (msg: VapiMessage) => {
+      if (msg.type === "status-update" && msg.status === "ended") {
+        expectedEndRef.current = true;
+        return;
+      }
+
       if (isShowCrisisSupportToolCall(msg)) {
         showCrisisSupport("vapi_tool_call");
         return;
@@ -359,8 +496,8 @@ export function ChatContent({
         });
       }
 
-      posthog.capture("voice_session_soft_recovery_shown", {
-        plan: isPremium ? "paid" : "free",
+      eventContextRef.current.posthog.capture("voice_session_soft_recovery_shown", {
+        plan: eventContextRef.current.isPremium ? "paid" : "free",
         technicalMessage: technicalMessage.slice(0, 240),
       });
     };
@@ -386,6 +523,7 @@ export function ChatContent({
         lowerErrorMessage.includes("meeting has ended");
 
       if (isMeetingEnded) {
+        expectedEndRef.current = true;
         setIsRecording(false);
         setIsWaitingForAssistant(false);
         await saveEndedSession({
@@ -463,6 +601,7 @@ export function ChatContent({
       vapi.off("call-end", onCallEnd);
       vapi.off("message", onMessage);
       vapi.off("error", onError);
+      finishInterruptedSessionRef.current = () => {};
     };
   }, []);
 
@@ -511,6 +650,7 @@ export function ChatContent({
 
     // ✅ ALWAYS allow stop
     if (isRecording) {
+      intentionalEndRef.current = true;
       setIsSaving(true);
       vapi.stop();
       return;
@@ -524,19 +664,39 @@ export function ChatContent({
     }
   };
 
-  const startVoiceSession = async (consent: boolean = false) => {
+  const startVoiceSession = async (consent: boolean = false, resumeExisting = false) => {
     if (isRecording || isInitializing) return;
+    if (resumeExisting && (!sessionIdRef.current || !sessionResumeTokenRef.current)) {
+      setVoiceRecoveryNotice({
+        title: "This session could not reconnect",
+        message: "The secure recovery details are no longer available. Finish this session to preserve what was captured.",
+        canReconnect: false,
+      });
+      return;
+    }
+
     setIsInitializing(true);
     setSessionNotice(null);
     setVoiceRecoveryNotice(null);
-    setMessages([]);
-    messagesRef.current = [];
-    setSessionTime(0);
-    setMaxSessionSeconds(null);
-    setOneMinuteWarningShown(false);
-    warningTriggeredRef.current = false;
-    saveAttemptedRef.current = false;
-    callStartRef.current = null;
+    reconnectAttemptRef.current = resumeExisting;
+    intentionalEndRef.current = false;
+    expectedEndRef.current = false;
+
+    if (!resumeExisting) {
+      setMessages([]);
+      messagesRef.current = [];
+      setSessionTime(0);
+      setMaxSessionSeconds(null);
+      maxSessionSecondsRef.current = null;
+      setOneMinuteWarningShown(false);
+      warningTriggeredRef.current = false;
+      saveAttemptedRef.current = false;
+      callStartRef.current = null;
+      activeSegmentStartRef.current = null;
+      accumulatedCallSecondsRef.current = 0;
+      sessionIdRef.current = null;
+      sessionResumeTokenRef.current = null;
+    }
 
     const showNoMinutesNotice = (data?: NoMinutesData) => {
       const minutesRemaining = data?.minutesRemaining ?? premiumCalls;
@@ -554,8 +714,18 @@ export function ChatContent({
 
     try {
       // 1. Ask server for call config (checks minutes balance, injects memory)
+      const resumeMessages = resumeExisting
+        ? messagesRef.current
+            .slice(-8)
+            .map((message) => ({
+              role: message.sender === "user" ? "user" : "assistant",
+              content: message.text.slice(0, 1_000),
+            }))
+        : undefined;
       const tokenRes = await api.post("/vapi-token", {
-        sessionId: sessionIdRef.current ?? undefined,
+        sessionId: resumeExisting ? sessionIdRef.current : undefined,
+        resumeToken: resumeExisting ? sessionResumeTokenRef.current : undefined,
+        resumeMessages,
         memoryConsent: consent,
         language
       });
@@ -572,30 +742,51 @@ export function ChatContent({
         return;
       }
 
-      const { assistantId, assistantOverrides, sessionId: serverSessionId } = tokenRes.data;
+      const {
+        assistantId,
+        assistantOverrides,
+        sessionId: serverSessionId,
+        resumeToken,
+      } = tokenRes.data;
 
       // Store the max duration for 1-minute warning calculation
       const maxSec = assistantOverrides?.maxDurationSeconds || (premiumCalls * 60);
-      setMaxSessionSeconds(maxSec);
+      const totalMaxSeconds = resumeExisting
+        ? accumulatedCallSecondsRef.current + maxSec
+        : maxSec;
+      setMaxSessionSeconds(totalMaxSeconds);
+      maxSessionSecondsRef.current = totalMaxSeconds;
 
       // Store the session ID from the server (has userId in metadata)
       sessionIdRef.current = serverSessionId;
+      sessionResumeTokenRef.current = resumeToken;
 
       // 2. Start Vapi with the full assistant config from server
       const vapi = vapiRef.current;
       if (!vapi) throw new Error("Vapi not initialized");
 
       // ✅ Start via the dashboard assistant (voice comes from there) + dynamic overrides
-      vapi.start(assistantId, assistantOverrides);
+      const call = await vapi.start(assistantId, assistantOverrides);
+      if (!call) throw new Error("Vapi did not establish the voice connection");
 
       // client/app/echo/[sessionId]/ChatContent.tsx — replace the catch block in startVoiceSession:
     } catch (err: unknown) {
       const apiError = err as ApiErrorLike;
       setIsInitializing(false);
+      reconnectAttemptRef.current = false;
+
+      if (resumeExisting) {
+        setVoiceRecoveryNotice({
+          title: "Reconnect did not complete",
+          message: "Your conversation is still here. Check your connection and tap reconnect to try again.",
+          canReconnect: true,
+        });
+      }
 
       // No response at all = network/CORS failure, not a server error
       if (!apiError.response) {
         if (isDevelopment) debugError("[startVoiceSession] Network/CORS error", apiError.message);
+        if (resumeExisting) return;
         alert(
           "Couldn't reach the server. This usually means one of:\n" +
           "• The server is still starting up (free hosting spins down when idle — wait ~30s and retry)\n" +
@@ -618,11 +809,13 @@ export function ChatContent({
       }
 
       if (status === 429) {
+        if (resumeExisting) return;
         alert("You're starting sessions too quickly. Please wait 30 seconds and try again.");
         return;
       }
 
       if (status === 401) {
+        if (resumeExisting) return;
         alert("Your session has expired. Please refresh the page and sign in again.");
         return;
       }
@@ -631,13 +824,17 @@ export function ChatContent({
         const serverError = apiError.response.data?.error || "The server could not prepare the call.";
         const serverCode = apiError.response.data?.code;
         if (isDevelopment) debugError("[startVoiceSession] Server error", status);
-        alert(serverCode ? `${serverError}\n\nCode: ${serverCode}` : serverError);
+        if (!resumeExisting) {
+          alert(serverCode ? `${serverError}\n\nCode: ${serverCode}` : serverError);
+        }
         return;
       }
 
       // Genuine server error — log full details for debugging, show generic message to user
       if (isDevelopment) debugError("[startVoiceSession] Server error", status);
-      alert("Something went wrong starting your session. Please try again in a moment.");
+      if (!resumeExisting) {
+        alert("Something went wrong starting your session. Please try again in a moment.");
+      }
     }
   };
 
@@ -699,8 +896,8 @@ export function ChatContent({
               </div>
             )}
             {voiceRecoveryNotice && (
-              <div className="mb-4 border-t border-b border-violet-400/25 py-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-4 border-t border-b border-violet-400/25 py-4" role="status">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-violet-100">
                       {voiceRecoveryNotice.title}
@@ -709,13 +906,35 @@ export function ChatContent({
                       {voiceRecoveryNotice.message}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setVoiceRecoveryNotice(null)}
-                    className="self-start rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white sm:self-auto"
-                  >
-                    Dismiss
-                  </button>
+                  {voiceRecoveryNotice.canReconnect ? (
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void startVoiceSession(consentGranted ?? false, true)}
+                        disabled={isInitializing}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[--color-electric-iris] px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isInitializing ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                        {isInitializing ? "Reconnecting..." : "Reconnect"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => finishInterruptedSessionRef.current()}
+                        disabled={isInitializing || isSaving}
+                        className="min-h-10 rounded-full border border-white/15 px-4 text-sm font-semibold text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Finish session
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setVoiceRecoveryNotice(null)}
+                      className="self-start rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white sm:self-auto"
+                    >
+                      Dismiss
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -749,6 +968,12 @@ export function ChatContent({
                   </span>
                 </div>
               </div>
+              {isRecording && (
+                <div className="mb-4 flex items-center justify-center gap-2 text-xs text-white/55" role="note">
+                  <Smartphone size={14} className="text-teal-300" />
+                  <span>Keep this screen on during your session.</span>
+                </div>
+              )}
 
 
 
