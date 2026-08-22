@@ -484,7 +484,7 @@ export default function HomeContent({
             <div className="void-kicker mb-5 flex items-center gap-2">
               <Timer size={14} /> Access
             </div>
-            <h2 className="void-subheading mb-5">Start with 10 free minutes each month.</h2>
+            <h2 className="void-subheading mb-5">Start with 5 free minutes each month.</h2>
             <p className="void-copy">
               Use EchoMind immediately with no card required. Your current
               balance is {premiumCalls} minute{premiumCalls !== 1 ? "s" : ""}.

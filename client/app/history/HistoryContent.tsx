@@ -221,7 +221,12 @@ export function HistoryContent({ onNavigate = () => { } }: { onNavigate?: (p: st
               sessionId: entry.sessionId,
               moodScore: entry.moodScore,
               createdAt: entry.createdAt,
-              date: new Date(entry.createdAt).toLocaleDateString(),
+              date: new Date(entry.createdAt).toLocaleString([], {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
               score: entry.moodScore
             }))} />
           </motion.div>

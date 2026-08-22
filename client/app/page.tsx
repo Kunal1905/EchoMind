@@ -14,7 +14,7 @@ const webApplicationJsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "INR",
-    description: "Ten free voice conversation minutes each month.",
+    description: "Five free voice conversation minutes each month.",
   },
 };
 

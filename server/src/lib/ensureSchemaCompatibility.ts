@@ -29,19 +29,27 @@ export async function ensureSchemaCompatibility() {
   `);
   await db.execute(sql`
     ALTER TABLE "users_table"
-    ADD COLUMN IF NOT EXISTS "minutes_remaining" integer DEFAULT 10 NOT NULL
+    ADD COLUMN IF NOT EXISTS "minutes_remaining" integer DEFAULT 5 NOT NULL
   `);
   await db.execute(sql`
     ALTER TABLE "users_table"
-    ALTER COLUMN "minutes_remaining" SET DEFAULT 10
+    ALTER COLUMN "minutes_remaining" SET DEFAULT 5
   `);
   await db.execute(sql`
     ALTER TABLE "users_table"
-    ADD COLUMN IF NOT EXISTS "minutes_total" integer DEFAULT 10 NOT NULL
+    ADD COLUMN IF NOT EXISTS "minutes_total" integer DEFAULT 5 NOT NULL
   `);
   await db.execute(sql`
     ALTER TABLE "users_table"
-    ALTER COLUMN "minutes_total" SET DEFAULT 10
+    ALTER COLUMN "minutes_total" SET DEFAULT 5
+  `);
+  await db.execute(sql`
+    UPDATE "users_table"
+    SET
+      "minutes_remaining" = GREATEST(5 - GREATEST("minutes_total" - "minutes_remaining", 0), 0),
+      "minutes_total" = 5
+    WHERE "plan" = 'free'
+      AND "minutes_total" <> 5
   `);
   await db.execute(sql`
     ALTER TABLE "users_table"

@@ -148,7 +148,7 @@ export default function TermsPage() {
                   <tr>
                     <td className="px-4 py-3 font-semibold text-white">Free</td>
                     <td className="px-4 py-3">₹0</td>
-                    <td className="px-4 py-3">10 minutes</td>
+                    <td className="px-4 py-3">5 minutes</td>
                     <td className="px-4 py-3">Active</td>
                   </tr>
                   <tr>

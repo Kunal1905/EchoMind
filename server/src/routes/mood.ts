@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "../config/db";
 import { moodEntriesTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
-import { eq, desc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -42,7 +42,7 @@ router.get("/", requireUser, async (req: AuthedRequest, res) => {
       .select()
       .from(moodEntriesTable)
       .where(eq(moodEntriesTable.userId, req.authUserId!))
-      .orderBy(desc(moodEntriesTable.createdAt));
+      .orderBy(asc(moodEntriesTable.createdAt), asc(moodEntriesTable.id));
 
     res.json(entries || []);
   } catch (error) {

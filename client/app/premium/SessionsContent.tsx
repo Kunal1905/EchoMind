@@ -33,7 +33,7 @@ const plans = [
     name: "Free",
     price: "₹0",
     billingLabel: "no card required",
-    minutes: 10,
+    minutes: 5,
     accent: "#E5E7EB",
     accentRgb: "229, 231, 235",
     badge: "ALWAYS AVAILABLE",
@@ -42,7 +42,7 @@ const plans = [
     available: true,
     actionLabel: "Start a conversation",
     features: [
-      "10 voice conversation minutes each month",
+      "5 voice conversation minutes each month",
       "AI-generated session summaries",
       "Mood timeline and history",
       "Optional personalized memory",
@@ -111,7 +111,7 @@ const plans = [
 ];
 
 const comparisonRows = [
-  { label: "Voice minutes per calendar month", values: ["10", "20", "40", "75"] },
+  { label: "Voice minutes per calendar month", values: ["5", "20", "40", "75"] },
   { label: "Session summaries", values: [true, true, true, true] },
   { label: "Mood history", values: [true, true, true, true] },
   { label: "Optional personalized memory", values: [true, true, true, true] },
@@ -122,7 +122,7 @@ const billingFaqs = [
   {
     question: "Is the Free plan a trial?",
     answer:
-      "No. Free is an ongoing tier with 10 voice minutes each calendar month. It does not require a payment card and does not automatically convert into a paid plan.",
+      "No. Free is an ongoing tier with 5 voice minutes each calendar month. It does not require a payment card and does not automatically convert into a paid plan.",
   },
   {
     question: "What happens when I use all my minutes?",
