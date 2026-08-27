@@ -31,7 +31,12 @@ export async function ensureMonthlyAllowance(userId: string) {
   const user = rows[0];
   if (!user || isSameCalendarMonth(user.resetAt)) return;
 
-  const allowance = getPlanAllowance(user.plan);
+  const plan = PLANS[user.plan as PlanKey] ?? PLANS.free;
+  // Minute packs are purchased balances, not subscriptions. They never expire
+  // and must not be silently replenished without another captured payment.
+  if (plan.billingModel === "pack") return;
+
+  const allowance = plan.minutes;
   await db
     .update(usersTable)
     .set({

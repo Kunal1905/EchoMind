@@ -32,7 +32,7 @@ export function normalizeSubscriptionAllowance(data: unknown): SubscriptionAllow
 
   return {
     freeTrialUsed: Math.max(0, numberOrFallback(subscription.freeTrialUsed, 0)),
-    freeTrialLimit: Math.max(0, numberOrFallback(subscription.freeTrialLimit, 10)),
+    freeTrialLimit: Math.max(0, numberOrFallback(subscription.freeTrialLimit, 5)),
     isPremium: subscription.isPremium === true,
     minutesRemaining: Math.max(0, minutesRemaining),
   };

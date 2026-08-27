@@ -7,7 +7,7 @@ import { db } from "../config/db";
 import { processedPaymentsTable, usersTable } from "../config/schema";
 import { requireUser, type AuthedRequest } from "../middleware/auth";
 import { and, desc, eq } from "drizzle-orm";
-import { PLANS, isPurchasablePlan, type PlanKey } from "../config/plans";
+import { PLANS, isPaidPlan, isPurchasablePlan, type PlanKey } from "../config/plans";
 import { activatePaidPlan } from "../lib/activatePaidPlan";
 
 const router = Router();
@@ -145,7 +145,11 @@ router.get("/receipts/:paymentId", requireUser, async (req: AuthedRequest, res) 
     doc.text(`Receipt reference: ${payment.paymentId}`);
     doc.text(`Payment date: ${date.toISOString().slice(0, 10)}`);
     doc.text(`Plan: ${plan?.name || payment.plan}`);
-    doc.text(`Voice allowance: ${payment.minutesCredited} minutes per calendar month`);
+    doc.text(
+      plan?.billingModel === "pack"
+        ? `Voice minutes added: ${payment.minutesCredited} (no expiry)`
+        : `Voice allowance: ${payment.minutesCredited} minutes per calendar month`
+    );
     doc.text(`Amount paid: ${currency} ${(amount / 100).toFixed(2)}`);
     doc.text(`Payment method: ${payment.paymentMethod || "Razorpay"}${payment.cardLast4 ? ` ending in ${payment.cardLast4}` : ""}`);
     doc.text(`Billing email: ${payment.billingEmail || "Account email"}`);
@@ -229,7 +233,7 @@ router.post("/verify-payment", requireUser, async (req: AuthedRequest, res) => {
     const orderUserId = String(order.notes?.userId || "");
     const plan = String(order.notes?.plan || "") as PlanKey;
 
-    if (order.id !== orderId || orderUserId !== req.authUserId || !isPurchasablePlan(plan)) {
+    if (order.id !== orderId || orderUserId !== req.authUserId || !isPaidPlan(plan)) {
       return res.status(400).json({ error: "Payment order does not match this account" });
     }
 

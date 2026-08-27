@@ -33,9 +33,9 @@ function AppScreenLoading() {
   );
 }
 
-const FREE_TRIAL_LIMIT = 10;
-type PlanId = "free" | "starter" | "growth" | "pro";
-type PurchasablePlanId = Exclude<PlanId, "free">;
+const FREE_TRIAL_LIMIT = 5;
+type PlanId = "free" | "plus" | "max" | "starter" | "growth" | "pro";
+type PurchasablePlanId = "plus" | "max";
 type CheckoutError = {
   message: string;
   planId: PurchasablePlanId;
@@ -43,9 +43,8 @@ type CheckoutError = {
 };
 
 const paidPlanDetails: Record<PurchasablePlanId, { name: string; minutes: number }> = {
-  starter: { name: "Starter", minutes: 20 },
-  growth: { name: "Growth", minutes: 40 },
-  pro: { name: "Pro", minutes: 75 },
+  plus: { name: "Plus", minutes: 20 },
+  max: { name: "Max", minutes: 45 },
 };
 
 type ApiError = {
@@ -150,6 +149,11 @@ export default function AppShell() {
 
   const [subscriptionData, setSubscriptionData] = useState(defaultSubscriptionData);
 
+  useEffect(() => {
+    const requestedView = new URLSearchParams(window.location.search).get("view");
+    if (requestedView === "chat") setCurrentPage("chat");
+  }, []);
+
   // Fetch subscription data
   useEffect(() => {
     if (!isLoaded) return;
@@ -227,7 +231,7 @@ export default function AppShell() {
         amount,
         currency,
         name: "EchoMind",
-        description: `${plan.name} plan - ${plan.minutes} voice minutes each month`,
+        description: `${plan.name} pack - ${plan.minutes} voice minutes with no expiry`,
         order_id: orderId,
         handler: async (paymentResponse) => {
           try {
@@ -246,7 +250,7 @@ export default function AppShell() {
               freeTrialLimit: sub.data.freeTrialLimit ?? FREE_TRIAL_LIMIT,
               plan: sub.data.plan || "free",
             });
-            alert(`Payment successful! Your ${plan.name} plan is active.`);
+            alert(`Payment successful! ${plan.minutes} voice minutes were added to your balance.`);
           } catch (e) {
             console.error("Failed to refresh subscription after payment:", e);
             setCheckoutError({

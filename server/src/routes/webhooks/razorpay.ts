@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { PLANS, isPurchasablePlan, type PlanKey } from "../../config/plans";
+import { PLANS, isPaidPlan, type PlanKey } from "../../config/plans";
 import { activatePaidPlan } from "../../lib/activatePaidPlan";
 
 const router = Router();
@@ -51,8 +51,8 @@ router.post("/", async (req, res) => {
       return res.status(200).json({ received: true }); // 200 so Razorpay doesn't retry
     }
 
-    if (!isPurchasablePlan(plan)) {
-      console.warn("[razorpay-webhook] Ignoring non-purchasable plan in payload:", { userId, plan, paymentId });
+    if (!isPaidPlan(plan)) {
+      console.warn("[razorpay-webhook] Ignoring non-paid plan in payload:", { userId, plan, paymentId });
       return res.status(200).json({ received: true });
     }
 
@@ -72,7 +72,7 @@ router.post("/", async (req, res) => {
       return res.status(200).json({ received: true, alreadyProcessed: true });
     }
 
-    console.log(`[razorpay-webhook] ${PLANS[plan].minutes} min monthly allowance → user ${userId} (${plan})`);
+    console.log(`[razorpay-webhook] ${PLANS[plan].minutes} minutes credited to user ${userId} (${plan})`);
   }
 
   res.status(200).json({ received: true });

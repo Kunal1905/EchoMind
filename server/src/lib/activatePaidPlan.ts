@@ -1,13 +1,13 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../config/db";
 import { processedPaymentsTable, usersTable } from "../config/schema";
-import { PLANS, type PurchasablePlanKey } from "../config/plans";
+import { PLANS, type PaidPlanKey } from "../config/plans";
 import { trackServer } from "./analytics";
 import { getRedis } from "./redis";
 
 type ActivatePaidPlanInput = {
   userId: string;
-  plan: PurchasablePlanKey;
+  plan: PaidPlanKey;
   paymentId: string;
   amount?: number;
   currency?: string;
@@ -47,14 +47,22 @@ export async function activatePaidPlan({
 
     if (claimed.length === 0) return false;
 
+    const balanceUpdate = planData.billingModel === "pack"
+      ? {
+          plan,
+          minutesRemaining: sql`${usersTable.minutesRemaining} + ${planData.minutes}`,
+          minutesTotal: sql`${usersTable.minutesTotal} + ${planData.minutes}`,
+        }
+      : {
+          plan,
+          minutesRemaining: planData.minutes,
+          minutesTotal: planData.minutes,
+          minuteAllowanceResetAt: new Date(),
+        };
+
     await tx
       .update(usersTable)
-      .set({
-        plan,
-        minutesRemaining: planData.minutes,
-        minutesTotal: planData.minutes,
-        minuteAllowanceResetAt: new Date(),
-      })
+      .set(balanceUpdate)
       .where(eq(usersTable.id, userId));
 
     return true;
@@ -65,7 +73,8 @@ export async function activatePaidPlan({
   trackServer("payment_captured_server", userId, {
     plan,
     amount,
-    monthlyAllowance: planData.minutes,
+    minutesCredited: planData.minutes,
+    billingModel: planData.billingModel,
   });
 
   const redis = getRedis();

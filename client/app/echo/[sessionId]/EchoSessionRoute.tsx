@@ -37,15 +37,10 @@ export default function EchoSessionRoute() {
   useEffect(() => {
     if (!isLoaded) return;
 
-    if (!isSignedIn) {
-      router.replace("/sign-in");
-      return;
-    }
-
-    void loadAllowance();
+    if (isSignedIn) void loadAllowance();
   }, [isLoaded, isSignedIn, loadAllowance, router]);
 
-  if (!isLoaded || (!allowance && !loadError)) {
+  if (isLoaded && isSignedIn && !allowance && !loadError) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black text-white/70">
         <div className="flex items-center gap-3 text-sm" role="status">
@@ -56,9 +51,7 @@ export default function EchoSessionRoute() {
     );
   }
 
-  if (!isSignedIn) return null;
-
-  if (loadError || !allowance) {
+  if (isSignedIn && (loadError || !allowance)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black px-5 text-center">
         <div className="max-w-md">
@@ -80,10 +73,10 @@ export default function EchoSessionRoute() {
 
   return (
     <ChatContent
-      isPremium={allowance.isPremium}
-      premiumCalls={allowance.minutesRemaining}
-      freeTrialUsed={allowance.freeTrialUsed}
-      freeTrialLimit={allowance.freeTrialLimit}
+      isPremium={allowance?.isPremium ?? false}
+      premiumCalls={allowance?.minutesRemaining ?? 5}
+      freeTrialUsed={allowance?.freeTrialUsed ?? 0}
+      freeTrialLimit={allowance?.freeTrialLimit ?? 5}
       onNavigate={(page) => router.push(routeForSessionPage(page))}
       onSessionComplete={loadAllowance}
     />

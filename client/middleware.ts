@@ -13,10 +13,10 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/premium(.*)',
+  '/echo(.*)',
 ])
 
 const isProtectedRoute = createRouteMatcher([
-  '/echo(.*)',
   '/history(.*)',
   '/settings(.*)',
 ])

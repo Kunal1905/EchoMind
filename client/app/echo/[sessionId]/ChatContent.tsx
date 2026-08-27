@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Clock, CreditCard, Info, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { ArrowLeft, Clock, CreditCard, Info, Loader2, LogIn, RefreshCw, Smartphone, UserPlus, X } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 import { vapiClient, isVapiClientReady } from "../../lib/vapiClient";
 import { VapiHUD } from "../../components/VapiHUD";
@@ -116,7 +116,7 @@ export function ChatContent({
   isPremium = false,
   premiumCalls = 0,
   freeTrialUsed = 0,
-  freeTrialLimit = 10,
+  freeTrialLimit = 5,
   onSessionComplete = () => { },
 }: {
   onNavigate?: (page: string) => void;
@@ -127,7 +127,6 @@ export function ChatContent({
   onSessionComplete?: () => void;
 }) {
   const { isSignedIn } = useUser();
-  if (!isSignedIn) redirect("/sign-in");
 
   const posthog = usePostHog();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -149,6 +148,7 @@ export function ChatContent({
   const [voiceRecoveryNotice, setVoiceRecoveryNotice] =
     useState<VoiceRecoveryNotice | null>(null);
   const [isCrisisSupportOpen, setIsCrisisSupportOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
@@ -641,6 +641,11 @@ export function ChatContent({
 
   /* ---------------- MIC HANDLER ---------------- */
   const toggleRecording = () => {
+    if (!isSignedIn) {
+      setIsAuthPromptOpen(true);
+      return;
+    }
+
     const vapi = vapiRef.current;
     if (!vapi || !isVapiClientReady()) {
       if (isDevelopment) debugError("VAPI client not initialized or missing API key");
@@ -858,6 +863,56 @@ export function ChatContent({
           setIsCrisisSupportOpen(false);
         }}
       />
+      <AnimatePresence>
+        {isAuthPromptOpen && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="voice-auth-title"
+          >
+            <motion.div
+              className="relative w-full max-w-md border border-white/15 bg-[#09090c] p-7 shadow-2xl shadow-black/60"
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsAuthPromptOpen(false)}
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center text-white/50 transition hover:text-white"
+                aria-label="Close sign-in prompt"
+              >
+                <X size={18} />
+              </button>
+              <p className="void-kicker mb-3">Ready when you are</p>
+              <h2 id="voice-auth-title" className="pr-8 text-2xl font-semibold text-white">
+                Sign in to begin speaking
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-white/60">
+                Your account keeps your minute balance, summaries, and privacy choices connected securely. You can continue exploring EchoMind without signing in.
+              </p>
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                <Link
+                  href={`/sign-in?redirect_url=${encodeURIComponent("/?view=chat")}`}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 bg-white px-4 text-sm font-semibold text-black transition hover:bg-white/90"
+                >
+                  <LogIn size={17} /> Sign in
+                </Link>
+                <Link
+                  href={`/sign-up?redirect_url=${encodeURIComponent("/?view=chat")}`}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/20 px-4 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5"
+                >
+                  <UserPlus size={17} /> Create account
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="relative z-10 container mx-auto max-w-4xl mb-10">
         <div className="flex items-center justify-between">

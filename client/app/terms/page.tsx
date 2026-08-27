@@ -130,7 +130,7 @@ export default function TermsPage() {
               5. Plans, billing, and refunds
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed">
-              EchoMind offers a free tier with a monthly voice-time allowance and paid plan purchases processed securely via Razorpay:
+              EchoMind offers a free tier with a monthly voice-time allowance and optional voice-minute packs processed securely via Razorpay:
             </p>
 
             {/* Plans Table */}
@@ -138,10 +138,10 @@ export default function TermsPage() {
               <table className="w-full text-left text-sm text-gray-300 border-collapse">
                 <thead className="bg-white/[0.03] text-xs font-semibold uppercase text-teal-400">
                   <tr>
-                    <th className="px-4 py-3 border-b border-white/10">Plan</th>
+                    <th className="px-4 py-3 border-b border-white/10">Offer</th>
                     <th className="px-4 py-3 border-b border-white/10">Price</th>
-                    <th className="px-4 py-3 border-b border-white/10">Monthly Minutes</th>
-                    <th className="px-4 py-3 border-b border-white/10">Status</th>
+                    <th className="px-4 py-3 border-b border-white/10">Voice Minutes</th>
+                    <th className="px-4 py-3 border-b border-white/10">Expiry</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
@@ -149,25 +149,19 @@ export default function TermsPage() {
                     <td className="px-4 py-3 font-semibold text-white">Free</td>
                     <td className="px-4 py-3">₹0</td>
                     <td className="px-4 py-3">5 minutes</td>
-                    <td className="px-4 py-3">Active</td>
+                    <td className="px-4 py-3">Refresh monthly</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-3 font-semibold text-white">Starter</td>
-                    <td className="px-4 py-3">₹399 one-time payment</td>
+                    <td className="px-4 py-3 font-semibold text-white">Plus pack</td>
+                    <td className="px-4 py-3">₹349 one-time payment</td>
                     <td className="px-4 py-3">20 minutes</td>
-                    <td className="px-4 py-3">Purchasable</td>
+                    <td className="px-4 py-3">No expiry</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-3 font-semibold text-white">Growth</td>
-                    <td className="px-4 py-3">₹799 one-time payment</td>
-                    <td className="px-4 py-3">40 minutes</td>
-                    <td className="px-4 py-3">Purchasable</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 font-semibold text-white">Pro</td>
-                    <td className="px-4 py-3">₹1,499 one-time payment</td>
-                    <td className="px-4 py-3">75 minutes</td>
-                    <td className="px-4 py-3">Purchasable</td>
+                    <td className="px-4 py-3 font-semibold text-white">Max pack</td>
+                    <td className="px-4 py-3">₹699 one-time payment</td>
+                    <td className="px-4 py-3">45 minutes</td>
+                    <td className="px-4 py-3">No expiry</td>
                   </tr>
                 </tbody>
               </table>
@@ -175,13 +169,13 @@ export default function TermsPage() {
 
             <ul className="list-disc pl-6 space-y-2 text-gray-300 text-sm">
               <li>
-                <strong className="text-white">Monthly Allowances:</strong> Free and paid plan allowances reset once per calendar month. Starter, Growth, and Pro are available for purchase.
+                <strong className="text-white">Minute balances:</strong> The Free allowance refreshes once per calendar month while the account remains on Free. Purchased Plus and Max minutes do not expire and are added to any remaining balance.
               </li>
               <li>
-                <strong className="text-white">Automatic Renewal:</strong> Paid plans are activated through a one-time payment and do not create an automatically recurring debit. The selected plan remains active unless your account arrangement is changed.
+                <strong className="text-white">Automatic renewal:</strong> Voice-minute packs are one-time purchases and do not create an automatically recurring debit. Additional packs are purchased only when you choose them.
               </li>
               <li>
-                <strong className="text-white">Refunds:</strong> Subscription payments are non-refundable once the monthly allowance has been activated, except where required by applicable law (such as under consumer protection regulations in India) or if a technical error occurred on our part during the billing process. If you believe you were charged in error, please contact <a href="mailto:support@echomind.ai" className="text-teal-400 hover:underline">support@echomind.ai</a> within 7 days of the transaction.
+                <strong className="text-white">Refunds:</strong> Pack purchases are generally non-refundable once minutes have been credited, except where required by applicable law (such as under consumer protection regulations in India) or if a technical error occurred on our part during billing. If you believe you were charged in error, please contact <a href="mailto:support@echomind.ai" className="text-teal-400 hover:underline">support@echomind.ai</a> within 7 days of the transaction.
               </li>
             </ul>
           </section>

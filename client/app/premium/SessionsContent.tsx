@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check, CircleMinus, Crown, MessageCircle, RefreshCw, Sparkles, X, Zap } from "lucide-react";
+import { AlertTriangle, Crown, MessageCircle, RefreshCw, Sparkles, X, Zap } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import ConstellationField from "../components/ConstellationField";
 import {
@@ -14,13 +14,13 @@ import { BillingOverview } from "./BillingOverview";
 
 type SessionsContentProps = {
   onNavigate?: (page: string) => void;
-  onUpgrade?: (planId: "starter" | "growth" | "pro") => void | Promise<void>;
+  onUpgrade?: (planId: "plus" | "max") => void | Promise<void>;
   isPremium?: boolean;
-  currentPlan?: "free" | "starter" | "growth" | "pro";
-  checkoutPlanId?: "starter" | "growth" | "pro" | null;
+  currentPlan?: "free" | "plus" | "max" | "starter" | "growth" | "pro";
+  checkoutPlanId?: "plus" | "max" | null;
   checkoutError?: {
     message: string;
-    planId: "starter" | "growth" | "pro";
+    planId: "plus" | "max";
     canRetry: boolean;
   } | null;
   onRetryCheckout?: () => void;
@@ -36,86 +36,58 @@ const plans = [
     minutes: 5,
     accent: "#E5E7EB",
     accentRgb: "229, 231, 235",
-    badge: "ALWAYS AVAILABLE",
+    badge: "INCLUDED",
     icon: <MessageCircle />,
     featured: false,
     available: true,
     actionLabel: "Start a conversation",
     features: [
-      "5 voice conversation minutes each month",
+      "5 voice minutes every calendar month",
       "AI-generated session summaries",
       "Mood timeline and history",
       "Optional personalized memory",
     ],
   },
   {
-    id: "starter" as const,
-    name: "Starter",
-    price: "₹399",
+    id: "plus" as const,
+    name: "Plus",
+    price: "₹349",
     billingLabel: "one-time payment",
     minutes: 20,
     accent: "#0D9488", // Modern Teal
     accentRgb: "13, 148, 136",
-    badge: "LIVE",
+    badge: "FLEXIBLE",
     icon: <Sparkles />,
-    featured: true,
+    featured: false,
     available: true,
-    actionLabel: "Choose Starter",
+    actionLabel: "Add 20 minutes",
     features: [
-      "20 voice conversation minutes each month",
-      "AI-generated session summaries",
-      "Mood timeline and history tracker",
+      "20 voice minutes added immediately",
+      "Minutes never expire",
+      "Session summaries and mood history",
       "Optional personalized memory",
     ],
   },
   {
-    id: "growth" as const,
-    name: "Growth",
-    price: "₹799",
+    id: "max" as const,
+    name: "Max",
+    price: "₹699",
     billingLabel: "one-time payment",
-    minutes: 40,
-    accent: "#8B5CF6", // Premium Purple
+    minutes: 45,
+    accent: "#8B5CF6",
     accentRgb: "139, 92, 246",
-    badge: "AVAILABLE",
+    badge: "BEST VALUE",
     icon: <Zap />,
-    featured: false,
+    featured: true,
     available: true,
-    actionLabel: "Choose Growth",
+    actionLabel: "Add 45 minutes",
     features: [
-      "40 voice conversation minutes each month",
-      "Everything in Starter",
-      "AI-generated session summaries",
-      "Mood timeline and optional memory",
+      "45 voice minutes added immediately",
+      "Minutes never expire",
+      "Session summaries and mood history",
+      "Optional personalized memory",
     ],
   },
-  {
-    id: "pro" as const,
-    name: "Pro",
-    price: "₹1,499",
-    billingLabel: "one-time payment",
-    minutes: 75,
-    accent: "#F59E0B", // Luxury Amber/Gold
-    accentRgb: "245, 158, 11",
-    badge: "AVAILABLE",
-    icon: <Crown />,
-    featured: false,
-    available: true,
-    actionLabel: "Choose Pro",
-    features: [
-      "75 voice conversation minutes each month",
-      "Everything in Growth",
-      "AI-generated session summaries",
-      "Mood timeline and optional memory",
-    ],
-  },
-];
-
-const comparisonRows = [
-  { label: "Voice minutes per calendar month", values: ["5", "20", "40", "75"] },
-  { label: "Session summaries", values: [true, true, true, true] },
-  { label: "Mood history", values: [true, true, true, true] },
-  { label: "Optional personalized memory", values: [true, true, true, true] },
-  { label: "Available now", values: [true, true, true, true] },
 ];
 
 const billingFaqs = [
@@ -127,22 +99,22 @@ const billingFaqs = [
   {
     question: "What happens when I use all my minutes?",
     answer:
-      "New voice conversations pause until your allowance resets in the next calendar month or you choose an available paid plan. Your account and saved history remain available.",
+      "New voice conversations pause until your free allowance refreshes or you add a voice-minute pack. Your account, summaries, mood history, and settings remain available.",
   },
   {
-    question: "Do paid plans renew automatically?",
+    question: "Do voice-minute packs renew automatically?",
     answer:
-      "No. Starter, Growth, and Pro are one-time Razorpay payments, not automatic recurring debits. Your selected plan remains active and its voice allowance resets each calendar month.",
+      "No. Plus and Max are one-time Razorpay payments. There is no subscription and no automatic recurring debit.",
   },
   {
-    question: "When do monthly minutes reset?",
+    question: "Do paid minutes expire?",
     answer:
-      "The allowance refreshes when you first use EchoMind in a new calendar month. Unused minutes do not roll over.",
+      "No. Purchased minutes remain in your balance until you use them. Free monthly minutes refresh only while you are on the Free tier.",
   },
   {
     question: "Can I cancel or request a refund?",
     answer:
-      "There is no recurring paid-plan debit to cancel. Payments are generally non-refundable after the allowance is activated, except where required by law or for a billing error. Keep your Razorpay receipt if you need to raise a payment dispute.",
+      "There is no recurring debit to cancel. Pack purchases are generally non-refundable after minutes are credited, except where required by law or for a billing error. Keep your Razorpay receipt if you need to raise a payment dispute.",
   },
 ];
 
@@ -168,14 +140,14 @@ export function SessionsContent({
           <div>
             <div className="void-kicker mb-5 inline-flex items-center gap-2">
               <Crown className="text-amber-400" size={16} />
-              {isPremium ? `Plan active (${currentPlan.toUpperCase()})` : "Upgrade your EchoMind sessions"}
+              {isPremium ? "Voice balance active" : "More time when you need it"}
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold text-white sm:text-5xl">
-              Plans and pricing.
+              Choose the time you need.
             </h1>
           </div>
           <p className="void-copy text-neutral-400 text-lg leading-relaxed">
-            Compare monthly voice allowances. Free never auto-charges, and every paid plan is a one-time purchase through Razorpay.
+            Start free, add 20 minutes for ₹349, or get the best rate with 45 minutes for ₹699. No subscription and no expiring paid balance.
           </p>
         </div>
 
@@ -210,7 +182,7 @@ export function SessionsContent({
         )}
 
         {/* Pricing Cards Grid */}
-        <div id="pricing-plans" className="scroll-mt-28 grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-stretch">
+        <div id="pricing-plans" className="mx-auto grid max-w-6xl scroll-mt-28 grid-cols-1 items-stretch gap-6 md:grid-cols-3">
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan.toLowerCase() === plan.name.toLowerCase();
             return (
@@ -230,10 +202,10 @@ export function SessionsContent({
                   featured={plan.featured}
                   available={plan.available}
                   features={plan.features}
-                  isCurrentPlan={isCurrentPlan}
+                  isCurrentPlan={plan.id === "free" && isCurrentPlan}
                   isLoading={checkoutPlanId === plan.id}
                   checkoutDisabled={checkoutPlanId !== null && plan.id !== "free"}
-                  actionLabel={plan.actionLabel}
+                  actionLabel={plan.id !== "free" && currentPlan === plan.id ? `Add another ${plan.minutes} minutes` : plan.actionLabel}
                   index={index}
                   onUpgrade={() => {
                     if (plan.id === "free") {
@@ -248,50 +220,6 @@ export function SessionsContent({
             );
           })}
         </div>
-
-        <section className="mt-20 border-t border-white/10 pt-10" aria-labelledby="compare-plans-title">
-          <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="void-kicker mb-3">Feature comparison</p>
-              <h2 id="compare-plans-title" className="text-3xl font-semibold text-white">
-                What every plan includes
-              </h2>
-            </div>
-            <p className="max-w-lg text-sm leading-6 text-white/55">
-              Every paid plan is a one-time purchase that sets your monthly voice allowance.
-            </p>
-          </div>
-          <div className="overflow-x-auto border-y border-white/10">
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-white">
-                  <th className="px-4 py-4 font-medium">Feature</th>
-                  {plans.map((plan) => (
-                    <th key={plan.id} className="px-4 py-4 font-semibold">{plan.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10 text-white/65">
-                {comparisonRows.map((row) => (
-                  <tr key={row.label}>
-                    <th className="px-4 py-4 font-medium text-white/80">{row.label}</th>
-                    {row.values.map((value, index) => (
-                      <td key={`${row.label}-${plans[index].id}`} className="px-4 py-4">
-                        {typeof value === "boolean" ? (
-                          value ? (
-                            <Check className="text-emerald-400" size={18} aria-label="Included" />
-                          ) : (
-                            <CircleMinus className="text-white/30" size={18} aria-label="Not included" />
-                          )
-                        ) : value}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
 
         <BillingOverview />
 

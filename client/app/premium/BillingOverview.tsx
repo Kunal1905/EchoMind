@@ -87,7 +87,13 @@ export function BillingOverview() {
   }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) void loadBilling();
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setLoading(false);
+      setData(null);
+      return;
+    }
+    void loadBilling();
   }, [isLoaded, isSignedIn, loadBilling]);
 
   const downloadReceipt = async (payment: BillingPayment) => {
@@ -119,6 +125,8 @@ export function BillingOverview() {
 
   const billingEmail = data?.billingEmail || user?.primaryEmailAddress?.emailAddress || "Account email unavailable";
 
+  if (!isLoaded || !isSignedIn) return null;
+
   const scrollToPlans = () => {
     document.getElementById("pricing-plans")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -133,7 +141,7 @@ export function BillingOverview() {
           </h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-white/55">
-          EchoMind uses one-time payments. It does not store a reusable card or schedule automatic charges.
+          EchoMind uses one-time minute-pack payments. It does not store a reusable card or schedule automatic charges.
         </p>
       </div>
 
@@ -159,7 +167,7 @@ export function BillingOverview() {
             <CalendarClock size={15} /> Next billing
           </dt>
           <dd className="mt-3 font-semibold text-white">No scheduled charge</dd>
-          <dd className="mt-1 text-sm leading-5 text-white/50">Paid plans do not renew automatically.</dd>
+          <dd className="mt-1 text-sm leading-5 text-white/50">Minute packs do not renew automatically.</dd>
         </div>
         <div className="border-b border-white/10 py-6 sm:pl-6">
           <dt className="flex items-center gap-2 text-xs font-semibold uppercase text-white/45">
@@ -196,7 +204,7 @@ export function BillingOverview() {
             </div>
 
             {data.payments.length === 0 ? (
-              <p className="border-y border-white/10 py-7 text-sm text-white/50">No paid-plan purchases yet.</p>
+              <p className="border-y border-white/10 py-7 text-sm text-white/50">No minute-pack purchases yet.</p>
             ) : (
               <div className="overflow-x-auto border-t border-white/10">
                 <table className="w-full min-w-[680px] text-left text-sm">
